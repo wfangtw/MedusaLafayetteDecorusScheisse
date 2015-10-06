@@ -1,11 +1,7 @@
 import numpy as np
 import theano
 import theano.tensor as T
-
-#macro definitions
-INPUT_DIM = 39
-NEURONS_PER_LAYER = 256
-OUTPUT_DIM = 48
+import macros
 
 #function definitions
 def ReLU(x):
@@ -15,16 +11,15 @@ def SoftMax(vec):
     return vec / vec.sum()
 
 def Update(params, gradients):
-    mu = 0.05
-    param_updates = [ (p, p - mu * g) for p, g in zip(params, gradients) ]
+    param_updates = [ (p, p - macros.LEARNING_RATE * g) for p, g in zip(params, gradients) ]
     return param_updates
 
 x = T.vector()
 y_hat = T.vector()
-W1 = theano.shared(np.random.randn(NEURONS_PER_LAYER, INPUT_DIM))
-b1 = theano.shared(np.random.randn(NEURONS_PER_LAYER))
-W = theano.shared(np.random.randn(OUTPUT_DIM, NEURONS_PER_LAYER))
-b = theano.shared(np.random.randn(OUTPUT_DIM))
+W1 = theano.shared(np.random.randn(macros.NEURONS_PER_LAYER, macros.INPUT_DIM))
+b1 = theano.shared(np.random.randn(macros.NEURONS_PER_LAYER))
+W = theano.shared(np.random.randn(macros.OUTPUT_DIM, macros.NEURONS_PER_LAYER))
+b = theano.shared(np.random.randn(macros.OUTPUT_DIM))
 
 params = [W1, b1, W, b]
 
@@ -36,8 +31,16 @@ cost = -T.log(y*y_hat).sum()
 dW1, db1, dW, db = T.grad(cost, [W1, b1, W, b])
 dparams = [dW1, db1, dW, db]
 
-output = theano.function(
+forward = theano.function(
         inputs=[x, y_hat],
         outputs=[y, cost],
         updates = Update(params, dparams)
         )
+'''def TrainBatch(batch = []):
+    var batch_params
+    for d in batch:
+        dout, dcost = forward(d.feature, d.label)
+        batch_params += np.array(dparams)
+    batch_params = LEARNING_RATE * batch_params / BATCH_SIZE
+    Update(params, batch_params.tolist())
+'''
