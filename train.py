@@ -1,7 +1,13 @@
+#########################################################
+#   FileName:	    [ train.py ]			#
+#   PackageName:    []					#
+#   Sypnosis:	    [ Train DNN model ]			#
+#   Author:	    [ MedusaLafayetteDecorusSchiesse]   #
+#########################################################
+
 import model as dnn
 import numpy as np
 import theano.tensor as T
-#import theano.config as config
 import macros
 
 x1 = np.random.randn(macros.INPUT_DIM).astype(dtype='float32')
@@ -10,8 +16,8 @@ y_hat1[1] = 1
 x2 = np.random.randn(macros.INPUT_DIM).astype(dtype='float32')
 y_hat2 = np.zeros(macros.OUTPUT_DIM).astype(dtype='float32')
 y_hat2[1] = 1
-y1, c1 = dnn.forward(x1, y_hat1)
-y2, c2 = dnn.forward(x2, y_hat2)
+y1, c1, w1 = dnn.forward(x1, y_hat1)
+y2, c2, w2 = dnn.forward(x2, y_hat2)
 dnn.update()
 
 def SharedDataset(data_xy):
@@ -44,4 +50,6 @@ LoadBatch.counter=0
 '''
 print(y1, y2)
 print(c1, c2)
+print np.asarray(w1)
+print np.asarray(w2)
 
