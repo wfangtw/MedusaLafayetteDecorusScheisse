@@ -36,11 +36,11 @@ forward = theano.function(
         outputs=[y, cost],
         updates = Update(params, dparams)
         )
-'''def TrainBatch(batch = []):
-    var batch_params
+def TrainBatch(batch):
+     var batch_params
     for d in batch:
-        dout, dcost = forward(d.feature, d.label)
+        dout, dcost = forward(d[0], d[1])
         batch_params += np.array(dparams)
-    batch_params = LEARNING_RATE * batch_params / BATCH_SIZE
+    batch_params = batch_params / macros.BATCH_SIZE
     Update(params, batch_params.tolist())
-'''
+
