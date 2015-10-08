@@ -13,6 +13,7 @@ import macros
 from itertools import izip
 
 #data_list: a list that contains pairs of input vectors and output vectors
+#data_setxy: a tuple with input matrix and output matrix
 
 
 #########################################
@@ -49,51 +50,71 @@ def TestTrain():
 #   Main functions  #
 #####################
 
+#theanolize
+def SharedDataset(data_xy):
+	data_x, data_y = data_xy
+	shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX))
+	shared_y = theano.shared(np.asarray(data_y, dtype=theano.config.floatX))
+	return shared_x, shared_y
+
+
+#For Training Result Evaluation
+#can be added in training cycle to preevent overfitting
+def Accuracy():
+    
+
+#Testing a subset of Test set with train tag (trg)
+#is set to trg if testing the whole set
+#otherwise, test the set from trg to trg+macros.TEST_SIZE 
+def TestTrain(test_x,test_y,train_tag):
+
+
+    result_y=dnn.foward(test_x,test_y)
+    return result_y
+
+
 #Load Function
-def LoadBatch(data_list):
+def LoadBatch(shared_x,shared_y):
 
     LoadBatch.counter+=1
 
     count=LoadBatch.counter
-
     b_size=n.BATCH_SIZE
+    return_x = np.transpose(shared_x.get_value()[count*b_size:(count+1)*b_size])
+    return_y = np.transpose(shared_y.get_value()[count*b_size:(count+1)*b_size])
 
-    return data_list[count*b_size:(count+1)*b_size]
-
-LoadBatch.counter=0
-
-#Train Function
-def EpochTrain():
-
-    i=0;
-    while (i<n.MAX_EPOCH):
+	sreturn_x = theano.shared(np.asarray(return_x, dtype=theano.config.floatX))
+	sreturn_y = theano.shared(np.asarray(return_y, dtype=theano.config.floatX))
+    return sreturn_x, sreturn_y
     
-        j=0
-        while(j<n.TRAIN_SIZE/n.BATCH_SIZE):
-
-            batch= LoadBatch()                  
-        
-            ####################
-            #dnn.forward(batch)#
-            ####################
-
-            j+=1
-
-        i+=1
-        LoadBatch.counter=0
-
-#For Complementary train
-def PseudoAccuracy():
-    pass
-
-
-#For Training Result Evaluation
-def Accuracy():
-    pass
+LoadBatch.counter=0
 
 #######################
 #   Train and Test    #
 #######################
+
+#Setting up shared variables
+
+test_x,test_y = SharedDataset(data_xy[0])
+validate_x,validate_y = SharedDataset(data_xy[1])
+train_x, train_y = SharedDataset(data_xy[2])
+
+#Training
+i=0;
+while (i<n.MAX_EPOCH):
+    
+    j=0
+    while(j<n.TRAIN_SIZE/n.BATCH_SIZE):
+
+        inputx,inputy = LoadBatch(train_x,train_y)
+        dnn.train_batch(inputx,inputy)
+        j+=1
+
+    i+=1
+    LoadBatch.counter=0
+
+
+TestTrain(test_x,test_y)
 
  
 #x1 = np.random.randn(macros.INPUT_DIM,2).astype(dtype='float32')
@@ -103,18 +124,9 @@ def Accuracy():
 x1 = np.array([[2, 1], [3, 4]]).astype(dtype=theano.config.floatX)
 y_hat1 = np.array([[1, 0], [0, 1], [0, 0]]).astype(dtype=theano.config.floatX)
 
-y1, c1 = dnn.forward(x1, y_hat1)
+y1, c1 = dnn.train_batch(x1, y_hat1)
 #dnn.update()
-'''
-def SharedDataset(data_xy):
-	data_x, data_y = data_xy
-	shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX))
-	shared_y = theano.shared(np.asarray(data_y, dtype=theano.config.floatX))
-	return shared_x, shared_y
 
-test_set_x, test_set_y = SharedDataset(test_set)
-valid_set_x, valid_set_y = SharedDataset(valid_set)
-train_set_x, train_set_y = SharedDataset(train_set)
 '''
 print(y1)
 print(c1)
