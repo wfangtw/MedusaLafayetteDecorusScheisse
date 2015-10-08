@@ -2,7 +2,7 @@
 #   FileName:	    [ model.py ]			#
 #   PackageName:    []					#
 #   Sypnosis:	    [ Define DNN model ]		#
-#   Author:	    [ MedusaLafayetteDecorusSchiesse]   #
+#   Author:	    [ MedusaLafayetteDecorusSchiesse]   # 
 #########################################################
 
 import numpy as np
@@ -20,7 +20,7 @@ def ReLU(x):
 
 def SoftMax(vec):
     vec = T.exp(vec)
-    return vec / vec.sum()
+    return vec / vec.sum(axis=0)
 
 # utility functions 
 def Update(params, gradients):
@@ -62,9 +62,15 @@ dparams = [dW1, db1, dW, db]
 # output functions #
 ####################
 
-# forward calculation
-forward = theano.function(
+# train batch
+train_batch = theano.function(
         inputs=[x, y_hat],
         outputs=[y, cost],
-		updates=Update(params, dparams)
+	updates=Update(params, dparams)
         )
+
+# forward
+forward = theano.function(
+	inputs=[x],
+	outputs=[y]
+	)

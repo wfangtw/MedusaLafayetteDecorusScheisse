@@ -6,9 +6,9 @@
 #########################################################
 
 #macro definitions
-INPUT_DIM = 2
+INPUT_DIM = 39
 NEURONS_PER_LAYER = 64
-OUTPUT_DIM = 3
+OUTPUT_DIM = 10
 BATCH_SIZE = 16
 LEARNING_RATE = 0.05
 MAX_EPOCH = 10

@@ -96,19 +96,18 @@ def Accuracy():
 #######################
 
  
-#x1 = np.random.randn(macros.INPUT_DIM,2).astype(dtype='float32')
-#y_hat1 = np.zeros((macros.OUTPUT_DIM, 2)).astype(dtype='float32')
-#y_hat1[1][0] = 1
-#y_hat1[2][1] = 1
-x1 = np.array([[2, 1], [3, 4]]).astype(dtype=theano.config.floatX)
-y_hat1 = np.array([[1, 0], [0, 1], [0, 0]]).astype(dtype=theano.config.floatX)
+x1 = np.random.randn(macros.INPUT_DIM,2).astype(dtype='float32')
+y_hat1 = np.zeros((macros.OUTPUT_DIM, 2)).astype(dtype='float32')
+y_hat1[1][0] = 1
+y_hat1[2][1] = 1
+#x1 = np.array([[2, 1], [3, 4]]).astype(dtype=theano.config.floatX)
+#y_hat1 = np.array([[1, 0], [0, 1], [0, 0]]).astype(dtype=theano.config.floatX)
 
-y1, c1 = dnn.forward(x1, y_hat1)
+y1, c1 = dnn.train_batch(x1, y_hat1)
 #dnn.update()
 '''
 def SharedDataset(data_xy):
-	data_x, data_y = data_xy
-	shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX))
+	data_x, data_y = data_xy shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX))
 	shared_y = theano.shared(np.asarray(data_y, dtype=theano.config.floatX))
 	return shared_x, shared_y
 
@@ -119,4 +118,4 @@ train_set_x, train_set_y = SharedDataset(train_set)
 print(y1)
 print(c1)
 print(y_hat1)
-
+#print(np.asarray(w1))
