@@ -61,13 +61,15 @@ def SharedDataset(data_xy):
 #For Training Result Evaluation
 #can be added in training cycle to preevent overfitting
 def Accuracy():
-    
+    pass
 
 #Testing a subset of Test set with train tag (trg)
 #is set to trg if testing the whole set
 #otherwise, test the set from trg to trg+macros.TEST_SIZE 
 def TestTrain(test_x,test_y,train_tag):
 
+    if train_tag!=0:
+        
 
     result_y=dnn.foward(test_x,test_y)
     return result_y
@@ -121,14 +123,23 @@ TestTrain(test_x,test_y)
 #y_hat1 = np.zeros((macros.OUTPUT_DIM, 2)).astype(dtype='float32')
 #y_hat1[1][0] = 1
 #y_hat1[2][1] = 1
-x1 = np.array([[2, 1], [3, 4]]).astype(dtype=theano.config.floatX)
-y_hat1 = np.array([[1, 0], [0, 1], [0, 0]]).astype(dtype=theano.config.floatX)
+#x1 = np.array([[2, 1], [3, 4]]).astype(dtype=theano.config.floatX)
+#y_hat1 = np.array([[1, 0], [0, 1], [0, 0]]).astype(dtype=theano.config.floatX)
 
-y1, c1 = dnn.train_batch(x1, y_hat1)
+#y1, c1 = dnn.train_batch(x1, y_hat1)
 #dnn.update()
+#=======
+#x1 = np.random.randn(macros.INPUT_DIM,2).astype(dtype='float32')
+#y_hat1 = np.zeros((macros.OUTPUT_DIM, 2)).astype(dtype='float32')
+#y_hat1[1][0] = 1
+#y_hat1[2][1] = 1
+#x1 = np.array([[2, 1], [3, 4]]).astype(dtype=theano.config.floatX)
+#y_hat1 = np.array([[1, 0], [0, 1], [0, 0]]).astype(dtype=theano.config.floatX)
 
+#y1, c1 = dnn.train_batch(x1, y_hat1)
+#dnn.update()
 '''
 print(y1)
 print(c1)
 print(y_hat1)
-
+#print(np.asarray(w1))
