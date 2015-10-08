@@ -96,12 +96,12 @@ def Accuracy():
 #######################
 
  
-x1 = np.random.randn(macros.INPUT_DIM,2).astype(dtype='float32')
-y_hat1 = np.zeros((macros.OUTPUT_DIM, 2)).astype(dtype='float32')
-y_hat1[1][0] = 1
-y_hat1[2][1] = 1
-#x1 = np.array([[2, 1], [3, 4]]).astype(dtype=theano.config.floatX)
-#y_hat1 = np.array([[1, 0], [0, 1], [0, 0]]).astype(dtype=theano.config.floatX)
+#x1 = np.random.randn(macros.INPUT_DIM,2).astype(dtype='float32')
+#y_hat1 = np.zeros((macros.OUTPUT_DIM, 2)).astype(dtype='float32')
+#y_hat1[1][0] = 1
+#y_hat1[2][1] = 1
+x1 = np.array([[2, 1], [3, 4]]).astype(dtype=theano.config.floatX)
+y_hat1 = np.array([[1, 0], [0, 1], [0, 0]]).astype(dtype=theano.config.floatX)
 
 y1, c1 = dnn.forward(x1, y_hat1)
 #dnn.update()

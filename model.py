@@ -66,7 +66,7 @@ a1 = ReLU(T.dot(W1,x) + b1.dimshuffle(0, 'x'))
 y = SoftMax( T.dot(W,a1) + b.dimshuffle(0, 'x') )
 
 # cost function
-cost = -T.log(y*y_hat).sum()
+cost = -T.log(T.dot(y.T, y_hat)).trace()
 
 # calculate gradient
 dW1_tmp, db1_tmp, dW_tmp, db_tmp = T.grad(cost, [W1, b1, W, b])
