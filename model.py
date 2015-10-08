@@ -25,14 +25,8 @@ def SoftMax(vec):
 # utility functions 
 def Update(params, gradients):
     param_updates = [ (p, p - macros.LEARNING_RATE * g) for p, g in zip(params, gradients) ]
-    #param_updates2 = [ (g, g * 0) for g in gradients ]
-    #param_updates.extend(param_updates2)
     return param_updates
-'''
-def Accumulate(dparams, dparams_tmp):
-    param_updates = [ (p, p + t ) for p, t in zip(dparams, dparams_tmp) ]
-    return param_updates
-'''
+
 ###############################
 # initialize shared variables #
 ###############################
@@ -48,14 +42,6 @@ W = theano.shared(np.random.randn(macros.OUTPUT_DIM, macros.NEURONS_PER_LAYER).a
 b = theano.shared(np.random.randn(macros.OUTPUT_DIM).astype(dtype=theano.config.floatX))
 
 params = [W1, b1, W, b]
-'''
-# gradient (for storage)
-dW1 = theano.shared(np.zeros((macros.NEURONS_PER_LAYER, macros.INPUT_DIM)).astype(dtype=theano.config.floatX))
-db1 = theano.shared(np.zeros((macros.NEURONS_PER_LAYER)).astype(dtype=theano.config.floatX))
-dW = theano.shared(np.zeros((macros.OUTPUT_DIM, macros.NEURONS_PER_LAYER)).astype(dtype=theano.config.floatX))
-db = theano.shared(np.zeros((macros.OUTPUT_DIM)).astype(dtype=theano.config.floatX))
-'''
-#dparams = [dW1, db1, dW, db]
 
 #########
 # model #
@@ -66,11 +52,11 @@ a1 = ReLU(T.dot(W1,x) + b1.dimshuffle(0, 'x'))
 y = SoftMax( T.dot(W,a1) + b.dimshuffle(0, 'x') )
 
 # cost function
-cost = -T.log(T.dot(y.T, y_hat)).trace()
+cost = -T.log(T.dot(y.T, y_hat)).trace()/macros.BATCH_SIZE
 
 # calculate gradient
-dW1_tmp, db1_tmp, dW_tmp, db_tmp = T.grad(cost, [W1, b1, W, b])
-dparams_tmp = [dW1_tmp, db1_tmp, dW_tmp, db_tmp]
+dW1, db1, dW, db = T.grad(cost, [W1, b1, W, b])
+dparams = [dW1, db1, dW, db]
 
 ####################
 # output functions #
@@ -80,7 +66,5 @@ dparams_tmp = [dW1_tmp, db1_tmp, dW_tmp, db_tmp]
 forward = theano.function(
         inputs=[x, y_hat],
         outputs=[y, cost],
-		updates=Update(params, dparams_tmp)
+		updates=Update(params, dparams)
         )
-# update parameters
-#update = theano.function([],[], updates=Update(params, dparams))
