@@ -1,16 +1,16 @@
 #########################################################
-#   FileName:	    [ macros.py ]						#
-#   PackageName:    []									#
-#   Sypnosis:	    [ Define macros ]					#
-#   Author:			[ MedusaLafayetteDecorusSchiesse]   #
+#   FileName:	    [ macros.py ]			#
+#   PackageName:    []					#
+#   Sypnosis:	    [ Define macros ]			#
+#   Author:	    [ MedusaLafayetteDecorusSchiesse]   #
 #########################################################
 
 #macro definitions
 INPUT_DIM = 39
-NEURONS_PER_LAYER = 64
-OUTPUT_DIM = 10
+NEURONS_PER_LAYER = 1024
+OUTPUT_DIM = 48
 BATCH_SIZE = 16
-LEARNING_RATE = 0.05
+LEARNING_RATE = 0.01
 MAX_EPOCH = 10
 TRAIN_SIZE = 1024
 TRAIN_TIMES = TRAIN_SIZE*MAX_EPOCH/BATCH_SIZE
