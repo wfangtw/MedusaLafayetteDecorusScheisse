@@ -10,10 +10,6 @@ import theano
 import theano.tensor as T
 import macros
 
-f = open('training_data/smallset.in')
-train_xy = eval(f.read())
-train_size = len(train_xy[0])
-
 ########################
 # function definitions #
 ########################
@@ -31,24 +27,13 @@ def Update(params, gradients):
     param_updates = [ (p, p - macros.LEARNING_RATE * g) for p, g in zip(params, gradients) ]
     return param_updates
 
-def SharedDataset(data_xy):
-    data_x, data_y = data_xy
-    shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX))
-    shared_y = theano.shared(np.asarray(data_y, dtype=theano.config.floatX))
-    return shared_x, shared_y
-
 ###############################
 # initialize shared variables #
 ###############################
 
-# shared training data
-x_shared, y_shared = SharedDataset(train_xy)
-
 # inputs
-batch_index = T.lscalar()
-x_test = T.matrix(dtype=theano.config.floatX)
-x = x_shared[batch_index * macros.BATCH_SIZE : (batch_index + 1) * macros.BATCH_SIZE].T
-y_hat = y_shared[batch_index * macros.BATCH_SIZE : (batch_index + 1) * macros.BATCH_SIZE].T
+x = T.matrix(dtype=theano.config.floatX)
+y_hat = T.matrix(dtype=theano.config.floatX)
 
 # parameters
 W1 = theano.shared(np.random.randn(macros.NEURONS_PER_LAYER, macros.INPUT_DIM).astype(dtype=theano.config.floatX)/np.sqrt(macros.INPUT_DIM))
@@ -75,8 +60,6 @@ y = SoftMax( T.dot(W,a1) + b.dimshuffle(0, 'x') )
 #a2 = SoftMax(T.dot(W2,a1) + b2.dimshuffle(0, 'x'))
 #a3 = SoftMax(T.dot(W3,a2) + b3.dimshuffle(0, 'x'))
 #y = SoftMax( T.dot(W,a3) + b.dimshuffle(0, 'x') )
-a1_t = SoftMax(T.dot(W1,x_test) + b1.dimshuffle(0, 'x'))
-y_t = SoftMax( T.dot(W,a1_t) + b.dimshuffle(0, 'x') )
 
 # cost function
 cost = -T.log(T.dot(y.T, y_hat)).trace()/macros.BATCH_SIZE
@@ -94,13 +77,13 @@ dparams = [dW1, db1, dW, db]
 
 # train batch
 train_batch = theano.function(
-        inputs=[batch_index],
+        inputs=[x, y_hat],
         outputs=[y, cost],
 	updates=Update(params, dparams)
         )
 
 # forward
 forward = theano.function(
-	inputs=[x_test],
-	outputs=[y_t]
+	inputs=[x],
+	outputs=[y]
 	)

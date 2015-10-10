@@ -7,3 +7,6 @@ __pycache__
 test*
 *.tgz
 data
+training_data
+smallset.in
+debug*

@@ -5,7 +5,7 @@
 #   Author:	    [ MedusaLafayetteDecorusSchiesse]   #
 #########################################################
 
-import model as dnn
+import model_old as dnn
 import numpy as np
 import theano
 import theano.tensor as T
@@ -13,12 +13,16 @@ import macros as n
 import time
 from itertools import izip
 
+f = open('training_data/smallset.in')
+train_xy = eval(f.read())
 
 #data_list: a list that contains pairs of input vectors and output vectors
 #data_setxy: a tuple with input matrix and output matrix
 
 
-######################################### #   Training Test: Complemetary train   # #   ( Adjust INPUT_DIM = OUTPUT_DIM )   #
+#########################################
+#   Training Test: Complemetary train   #
+#   ( Adjust INPUT_DIM = OUTPUT_DIM )   #
 #########################################
 
 
@@ -50,6 +54,15 @@ def TestTrain():
 #   Main functions  #
 #####################
 
+#theanolize
+def SharedDataset(data_xy):
+    data_x, data_y = data_xy
+    train_size = len(data_x)
+    print train_size
+    shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX))
+    shared_y = theano.shared(np.asarray(data_y, dtype=theano.config.floatX))
+    return shared_x, shared_y, train_size
+
 
 #For Training Result Evaluation
 #can be added in training cycle to preevent overfitting
@@ -68,7 +81,33 @@ def Accuracy():
    # return result_y
 
 
+#Load Function
+def LoadBatch(shared_x,shared_y):
 
+    LoadBatch.counter+=1
+
+
+    count=LoadBatch.counter
+    b_size=n.BATCH_SIZE
+    return_x = np.transpose(shared_x.get_value()[count*b_size:(count+1)*b_size])
+    return_y = np.transpose(shared_y.get_value()[count*b_size:(count+1)*b_size])
+  #  print LoadBatch.counter
+
+    sreturn_x = theano.shared(np.asarray(return_x, dtype=theano.config.floatX))
+    sreturn_y = theano.shared(np.asarray(return_y, dtype=theano.config.floatX))
+    return sreturn_x, sreturn_y
+
+LoadBatch.counter=0
+
+
+# def LoadBatch():
+
+#
+
+
+
+## LoadBatch.x_list=[]
+## LoadBatch.y_list=[]
 
 #######################
 #   Train and Test    #
@@ -79,16 +118,30 @@ def Accuracy():
 #test_x,test_y = SharedDataset(data_xy[0])
 #validate_x,validate_y = SharedDataset(data_xy[1])
 #Training
-start_time = time.time()
+
+train_x, train_y, train_size = SharedDataset(train_xy)
 #print train_size
-for i in range(0, n.MAX_EPOCH):
-    for j in range(0, dnn.train_size/n.BATCH_SIZE):
-        y, c = dnn.train_batch(j)
-        print("iteration: " + str(j))
+start = time.time()
+i=0;
+while (i<n.MAX_EPOCH):
+
+    j=0
+    while(j<train_size/n.BATCH_SIZE):
+
+        inputx,inputy = LoadBatch(train_x,train_y)
+        #print(inputx.get_value().tolist())
+        #print(inputy.get_value().tolist())
+        y, c = dnn.train_batch(inputx.get_value(),inputy.get_value())
+        #print LoadBatch.counter
+        print(j)
         #print(y)
-        print("cost: " + str(c))
-end_time = time.time()
-print("Total time: " + str(end_time-start_time))
+        print(c)
+        j+=1
+
+    i+=1
+    LoadBatch.counter=0
+end = time.time()
+print("total time: " + str(end-start))
 
 #TestTrain(test_x,test_y)
 
