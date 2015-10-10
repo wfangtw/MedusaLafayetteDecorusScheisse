@@ -59,29 +59,37 @@ def SharedDataset(data_xy):
 
 
 #For Training Result Evaluation
-#can be added in training cycle to preevent overfitting
-def Accuracy():
-    pass
+#can be added in training cycle to prevent overfitting
+def Accuracy(intput_y,output_y):
+
+    
 
 #Testing a subset of Test set with train tag (trg)
-#is set to trg if testing the whole set
+#0 is set to trg if testing the whole set
 #otherwise, test the set from trg to trg+macros.TEST_SIZE 
-def TestTrain(test_x,test_y,train_tag):
+def TestTrain(test_x,test_y,trg):
 
-    if train_tag!=0:
-        
+    t_size = macros.TEST_SIZE
 
-    result_y=dnn.foward(test_x,test_y)
-    return result_y
+    if trg!=0:     
+        return_x = np.transpose(test_x.get_value()[trg*t_size:(trg+1)*t_size])
+        return_y = np.transpose(test_y.get_value()[trg*t_size:(trg+1)*t_size])
+    elif trg == 0 :
+        return_x = np.transpose(test_x.get_value())
+        return_y = np.transpose(test_y.get_value())
+
+	sreturn_x = theano.shared(np.asarray(return_x, dtype=theano.config.floatX))
+	sreturn_y = theano.shared(np.asarray(return_y, dtype=theano.config.floatX))
+
+    output_y=dnn.foward(sreturn_x,sreturn_y)
+    return output_y
 
 
 #Load Function
 def LoadBatch(shared_x,shared_y):
 
-    LoadBatch.counter+=1
-
     count=LoadBatch.counter
-    b_size=n.BATCH_SIZE
+    b_size=macros.BATCH_SIZE
     return_x = np.transpose(shared_x.get_value()[count*b_size:(count+1)*b_size])
     return_y = np.transpose(shared_y.get_value()[count*b_size:(count+1)*b_size])
 
@@ -89,7 +97,6 @@ def LoadBatch(shared_x,shared_y):
 	sreturn_y = theano.shared(np.asarray(return_y, dtype=theano.config.floatX))
     return sreturn_x, sreturn_y
     
-LoadBatch.counter=0
 
 #######################
 #   Train and Test    #
@@ -113,10 +120,9 @@ while (i<n.MAX_EPOCH):
         j+=1
 
     i+=1
-    LoadBatch.counter=0
 
-
-TestTrain(test_x,test_y)
+#Validation
+#TestTrain(test_x,test_y)
 
  
 #x1 = np.random.randn(macros.INPUT_DIM,2).astype(dtype='float32')
