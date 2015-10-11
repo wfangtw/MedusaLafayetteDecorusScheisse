@@ -8,7 +8,8 @@
 import numpy as np
 import theano
 import theano.tensor as T
-import macros
+import macros as n
+import cPickle
 
 f = open('../training_data/smallset.train')
 train_xy = eval(f.read())
@@ -27,9 +28,12 @@ def SoftMax(vec):
     return vec / vec.sum(axis=0)
 
 # utility functions
-def Update(params, gradients):
-    param_updates = [ (p, p - macros.LEARNING_RATE * g) for p, g in zip(params, gradients) ]
-    macros.LEARNING_RATE *= macros.LEARNING_RATE_DECAY
+def Update(params, gradients, velocities):
+    param_updates = [ (v, v * n.MOMENTUM - n.LEARNING_RATE * g) for g, v in zip(gradients, velocities) ]
+    for i in range(0, len(gradients)):
+        velocities[i] = velocities[i] * n.MOMENTUM - n.LEARNING_RATE * gradients[i]
+    param_updates = [ (p, p + v) for p, v in zip(params, velocities) ]
+    n.LEARNING_RATE *= n.LEARNING_RATE_DECAY
     return param_updates
 
 def SharedDataset(data_xy):
@@ -47,25 +51,30 @@ x_shared, y_shared = SharedDataset(train_xy)
 
 # inputs for batch training
 batch_index = T.lscalar()
-x = x_shared[batch_index * macros.BATCH_SIZE : (batch_index + 1) * macros.BATCH_SIZE].T
-y_hat = y_shared[batch_index * macros.BATCH_SIZE : (batch_index + 1) * macros.BATCH_SIZE].T
+x = x_shared[batch_index * n.BATCH_SIZE : (batch_index + 1) * n.BATCH_SIZE].T
+y_hat = y_shared[batch_index * n.BATCH_SIZE : (batch_index + 1) * n.BATCH_SIZE].T
 
 # inputs for validation set & testing
 x_test = T.matrix(dtype=theano.config.floatX)
 y_val = T.matrix(dtype=theano.config.floatX)
 
 # parameters
-W1 = theano.shared(np.random.randn(macros.NEURONS_PER_LAYER, macros.INPUT_DIM).astype(dtype=theano.config.floatX)/np.sqrt(macros.INPUT_DIM))
-b1 = theano.shared(np.random.randn(macros.NEURONS_PER_LAYER).astype(dtype=theano.config.floatX))
-#W2 = theano.shared(np.random.randn(macros.NEURONS_PER_LAYER, macros.NEURONS_PER_LAYER).astype(dtype=theano.config.floatX)/np.sqrt(macros.INPUT_DIM))
-#b2 = theano.shared(np.random.randn(macros.NEURONS_PER_LAYER).astype(dtype=theano.config.floatX))
-#W3 = theano.shared(np.random.randn(macros.NEURONS_PER_LAYER, macros.NEURONS_PER_LAYER).astype(dtype=theano.config.floatX)/np.sqrt(macros.INPUT_DIM))
-#b3 = theano.shared(np.random.randn(macros.NEURONS_PER_LAYER).astype(dtype=theano.config.floatX))
-W = theano.shared(np.random.randn(macros.OUTPUT_DIM, macros.NEURONS_PER_LAYER).astype(dtype=theano.config.floatX)/np.sqrt(macros.INPUT_DIM))
-b = theano.shared(np.random.randn(macros.OUTPUT_DIM).astype(dtype=theano.config.floatX))
+W1 = theano.shared(np.random.randn(n.NEURONS_PER_LAYER, n.INPUT_DIM).astype(dtype=theano.config.floatX)/np.sqrt(n.INPUT_DIM))
+b1 = theano.shared(np.random.randn(n.NEURONS_PER_LAYER).astype(dtype=theano.config.floatX))
+v_W1 = T.zeros_like(W1, dtype=theano.config.floatX)
+v_b1 = T.zeros_like(b1, dtype=theano.config.floatX)
+#W2 = theano.shared(np.random.randn(n.NEURONS_PER_LAYER, n.NEURONS_PER_LAYER).astype(dtype=theano.config.floatX)/np.sqrt(n.INPUT_DIM))
+#b2 = theano.shared(np.random.randn(n.NEURONS_PER_LAYER).astype(dtype=theano.config.floatX))
+#W3 = theano.shared(np.random.randn(n.NEURONS_PER_LAYER, n.NEURONS_PER_LAYER).astype(dtype=theano.config.floatX)/np.sqrt(n.INPUT_DIM))
+#b3 = theano.shared(np.random.randn(n.NEURONS_PER_LAYER).astype(dtype=theano.config.floatX))
+W = theano.shared(np.random.randn(n.OUTPUT_DIM, n.NEURONS_PER_LAYER).astype(dtype=theano.config.floatX)/np.sqrt(n.INPUT_DIM))
+b = theano.shared(np.random.randn(n.OUTPUT_DIM).astype(dtype=theano.config.floatX))
+v_W = T.zeros_like(W, dtype=theano.config.floatX)
+v_b = T.zeros_like(b, dtype=theano.config.floatX)
 
 #params = [W1, b1, W2, b2, W3, b3, W, b]
 params = [W1, b1, W, b]
+velocities = [v_W1, v_b1, v_W, v_b]
 
 #########
 # model #
@@ -83,7 +92,7 @@ a1_t = ReLU(T.dot(W1,x_test) + b1.dimshuffle(0, 'x'))
 y_t = SoftMax( T.dot(W,a1_t) + b.dimshuffle(0, 'x') )
 
 # cost function
-cost = -T.log(T.dot(y.T, y_hat)).trace()/macros.BATCH_SIZE
+cost = -T.log(T.dot(y.T, y_hat)).trace()/n.BATCH_SIZE
 
 # calculate gradient
 
@@ -103,7 +112,7 @@ prediction = y_t.argmax(axis=0)
 train_batch = theano.function(
         inputs=[batch_index],
         outputs=[y, cost],
-	updates=Update(params, dparams)
+	updates=Update(params, dparams, velocities)
         )
 
 # test
@@ -123,7 +132,7 @@ predict = theano.function(
 
 # save_model
 def save_model():
-    save_file = open('model_data.txt','wb')
+    save_file = open('../models/model_data.txt','wb')
     cPickle.dump(W1.get_value(borrow=True), save_file, -1)
     cPickle.dump(b1.get_value(borrow=True), save_file, -1)
     cPickle.dump(W.get_value(borrow=True), save_file, -1)
@@ -131,4 +140,9 @@ def save_model():
     save_file.close()
 
 # load_model
-#def
+def load_model():
+    save_file = open('../models/model_data.txt')
+    W1.set_value(cPickle.load(save_file), borrow=True)
+    b1.set_value(cPickle.load(save_file), borrow=True)
+    W.set_value(cPickle.load(save_file), borrow=True)
+    b.set_value(cPickle.load(save_file), borrow=True)

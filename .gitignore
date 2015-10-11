@@ -10,3 +10,5 @@ data
 training_data
 smallset*
 debug*
+models
+*.in
