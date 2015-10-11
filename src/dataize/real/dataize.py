@@ -17,7 +17,7 @@ label_female = {}
 label_dev_male = []
 label_dev_female = []
 
-f_label = open("data/label/train.lab", "r")
+f_label = open("/project/peskotiveswf/Workspace/MLDS_hw1/data/label/train.lab", "r")
 
 for line in f_label:
     l = line.strip(' \n').split(',')
@@ -29,7 +29,7 @@ for line in f_label:
                label_male[ll[0]].append(ll[1])
         else:
             label_male[ll[0]] = [ll[1]]
-            if len(label_dev_male) < 30 and random.random() < 0.1:
+            if len(label_dev_male) < 30 and random.random() < 0.2:
                 label_dev_male.append(ll[0])
     else:                                           # female data
         if ll[0] in label_female:
@@ -37,7 +37,7 @@ for line in f_label:
                label_female[ll[0]].append(ll[1])
         else:
             label_female[ll[0]] = [ll[1]]
-            if len(label_dev_female) < 16 and random.random() < 0.12:
+            if len(label_dev_female) < 16 and random.random() < 0.2:
                 label_dev_female.append(ll[0])
 f_label.close()
 
@@ -52,7 +52,7 @@ label_dev = label_dev_male + label_dev_female
 
 # parse phones/48_39.map
 
-f_map = open("data/phones/48_39.map", "r")
+f_map = open("/project/peskotiveswf/Workspace/MLDS_hw1/data/phones/48_39.map", "r")
 
 for index, line in enumerate(f_map):
     l = line.strip(' \n').split("\t")
@@ -61,7 +61,7 @@ for index, line in enumerate(f_map):
 f_map.close()
 
 # parse mfcc/train.ark
-f_mfcc = open("data/mfcc/train.ark", "r")
+f_mfcc = open("/project/peskotiveswf/Workspace/MLDS_hw1/data/mfcc/train.ark", "r")
 
 for line in f_mfcc:
     l = line.strip(' \n').split(' ')
@@ -93,10 +93,10 @@ dev_ip = (dev_ip - dev_mean) / dev_std
 train = (train_ip.tolist(), train_op)
 dev = (dev_ip.tolist(), dev_op)
 
-f_train = open("training_data/train.in", "w")
+f_train = open("/project/peskotiveswf/Workspace/MLDS_hw1/training_data/simple/train.in", "w")
 f_train.write(str(train))
 f_train.close()
 
-f_dev = open("training_data/dev.in", "w")
+f_dev = open("/project/peskotiveswf/Workspace/MLDS_hw1/training_data/simple/dev.in", "w")
 f_dev.write(str(dev))
 f_dev.close()
