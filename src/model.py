@@ -12,9 +12,12 @@ import macros as n
 import cPickle
 
 print("Loading training data...")
-f = open('../training_data/train.in')
-train_xy = eval(f.read())
+with open('../training_data/simple/train.in') as f:
+    print "aaa"
+    train_xy = cPickle.load(f)
+print "bbb"
 train_size = len(train_xy[0])
+print "ccc"
 
 ########################
 # function definitions #

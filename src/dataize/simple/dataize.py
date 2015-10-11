@@ -1,5 +1,6 @@
 #!/usr/bin/python
 import numpy as np
+import cPickle
 import random
 
 train_ip = []   # [ [39 dim], [39 dim], ... ]
@@ -17,7 +18,7 @@ label_female = {}
 label_dev_male = []
 label_dev_female = []
 
-f_label = open("/project/peskotiveswf/Workspace/MLDS_hw1/data/label/train.lab", "r")
+f_label = open("../../../data/label/train.lab", "r")
 
 for line in f_label:
     l = line.strip(' \n').split(',')
@@ -52,7 +53,7 @@ label_dev = label_dev_male + label_dev_female
 
 # parse phones/48_39.map
 
-f_map = open("/project/peskotiveswf/Workspace/MLDS_hw1/data/phones/48_39.map", "r")
+f_map = open("../../../data/phones/48_39.map", "r")
 
 for index, line in enumerate(f_map):
     l = line.strip(' \n').split("\t")
@@ -61,7 +62,7 @@ for index, line in enumerate(f_map):
 f_map.close()
 
 # parse mfcc/train.ark
-f_mfcc = open("/project/peskotiveswf/Workspace/MLDS_hw1/data/mfcc/train.ark", "r")
+f_mfcc = open("../../../data/mfcc/train.ark", "r")
 
 for line in f_mfcc:
     l = line.strip(' \n').split(' ')
@@ -93,10 +94,7 @@ dev_ip = (dev_ip - dev_mean) / dev_std
 train = (train_ip.tolist(), train_op)
 dev = (dev_ip.tolist(), dev_op)
 
-f_train = open("/project/peskotiveswf/Workspace/MLDS_hw1/training_data/simple/train.in", "w")
-f_train.write(str(train))
-f_train.close()
-
-f_dev = open("/project/peskotiveswf/Workspace/MLDS_hw1/training_data/simple/dev.in", "w")
-f_dev.write(str(dev))
-f_dev.close()
+with open("../../../training_data/simple/train.in", "w") as f_train:
+    cPickle.dump(train, f_train)
+with open("../../../training_data/simple/dev.in", "w") as f_dev:
+    cPickle.dump(dev, f_dev)

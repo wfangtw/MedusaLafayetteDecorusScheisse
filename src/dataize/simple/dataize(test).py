@@ -1,5 +1,6 @@
 #!/usr/bin/python
 import numpy as np
+import cPickle
 import random
 import sys
 
@@ -35,7 +36,7 @@ test_op = []    # [ instant_ID, instant_ID, ... ]
 ##    print key + ": " + str(len(value))             # every data has 8 sentences
 
 # parse mfcc/test.ark
-f_mfcc = open("/project/peskotiveswf/Workspace/MLDS_hw1/data/mfcc/test.ark", "r")
+f_mfcc = open("../../../data/mfcc/test.ark", "r")
 
 for line in f_mfcc:
     l = line.strip(' \n').split(' ')
@@ -54,6 +55,5 @@ test_ip = (test_ip - mean) / std
 # write to file
 test = (test_ip.tolist(), test_op)
 
-f_test = open("/project/peskotiveswf/Workspace/MLDS_hw1/training_data/simple/test.in", "w")
-f_test.write(str(test))
-f_test.close()
+with open("../../../training_data/simple/test.in", "w") as f_test:
+    cPickle.dump(test, f_test)

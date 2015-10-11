@@ -37,18 +37,16 @@ def Accuracy(val_x, val_y):
 # Load Test and Dev Data
 print("Current time: " + str(time.time()-start_time))
 print("Loading dev data...")
-f = open('../training_data/dev.in','r')
-val_data_x, val_data_y = eval(f.read())
+with open('../training_data/simple/dev.in','r') as f:
+    val_data_x, val_data_y = cPickle.load(f)
 val_x = np.array(val_data_x).astype(theano.config.floatX).T
 val_y = np.array(val_data_y).astype(theano.config.floatX).T
-f.close()
 
 print("Current time: " + str(time.time()-start_time))
 print("Loading test data...")
-f = open('../training_data/test.in','r')
-test_data_x, test_id = eval(f.read())
+with open('../training_data/simple/test.in','r') as f:
+    test_data_x, test_id = cPickle.load(f)
 test_x = np.array(test_data_x).astype(theano.config.floatX).T
-f.close()
 
 #Training
 print("Current time: " + str(time.time()-start_time))

@@ -93,10 +93,10 @@ dev_ip = (dev_ip - dev_mean) / dev_std
 train = (train_ip.tolist(), train_op)
 dev = (dev_ip.tolist(), dev_op)
 
-f_train = open("/project/peskotiveswf/Workspace/MLDS_hw1/training_data/simple/train.in", "w")
+f_train = open("/project/peskotiveswf/Workspace/MLDS_hw1/training_data/real/train.in", "w")
 f_train.write(str(train))
 f_train.close()
 
-f_dev = open("/project/peskotiveswf/Workspace/MLDS_hw1/training_data/simple/dev.in", "w")
+f_dev = open("/project/peskotiveswf/Workspace/MLDS_hw1/training_data/real/dev.in", "w")
 f_dev.write(str(dev))
 f_dev.close()
