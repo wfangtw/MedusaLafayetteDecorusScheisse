@@ -58,8 +58,9 @@ print("Start training")
 batch_indices = range(0, int(math.ceil(dnn.train_size/n.BATCH_SIZE)))
 i = 0
 dev_acc = []
-combo = 0
-while True:
+#combo = 0
+#while True:
+for i in range(0, 70):
     print("===============================")
     print("EPOCH: " + str(i+1))
     random.shuffle(batch_indices)
@@ -77,13 +78,13 @@ while True:
     dev_acc.append(Accuracy(val_x,val_y))
     print("dev accuracy: " + str(dev_acc[-1]))
     print("Current time: " + str(time.time()-start_time))
-    if i != 0 and dev_acc[-1] - dev_acc[-2] < 0.00005:
-        combo += 1
-        if combo == 5:
-            break
-    else:
-        combo = 0
-    i += 1
+    #if i != 0 and dev_acc[-1] - dev_acc[-2] < 0.00005:
+    #    combo += 1
+    #    if combo == 5:
+    #        break
+    #else:
+    #    combo = 0
+    #i += 1
 print("===============================")
 print dev_acc
 dnn.save_model()
@@ -93,8 +94,7 @@ f = open('../data/phones/48_39.map','r')
 phone_map = {}
 i = 0
 for l in f:
-    instance = l.split('\t')[0]
-    phone_map[i] = instance
+    phone_map[i] = l.strip(' \n').split('\t')[1]
     i += 1
 f.close()
 
