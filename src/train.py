@@ -58,6 +58,7 @@ print("Start training")
 batch_indices = range(0, int(math.ceil(dnn.train_size/n.BATCH_SIZE)))
 i = 0
 dev_acc = []
+combo = 0
 while True:
     print("===============================")
     print("EPOCH: " + str(i+1))
@@ -77,7 +78,11 @@ while True:
     print("dev accuracy: " + str(dev_acc[-1]))
     print("Current time: " + str(time.time()-start_time))
     if i != 0 and dev_acc[-1] - dev_acc[-2] < 0.00005:
-        break
+        combo += 1
+        if combo == 5:
+            break
+    else:
+        combo = 0
     i += 1
 print("===============================")
 print dev_acc

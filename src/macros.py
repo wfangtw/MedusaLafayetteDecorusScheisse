@@ -1,8 +1,8 @@
 #########################################################
-#   FileName:	    [ macros.py ]			#
-#   PackageName:    []					#
-#   Sypnosis:	    [ Define macros ]			#
-#   Author:	    [ MedusaLafayetteDecorusSchiesse]   #
+#   FileName:	    [ macros.py ]		            	#
+#   PackageName:    []					                #
+#   Sypnosis:	    [ Define macros ]			        #
+#   Author:	        [ MedusaLafayetteDecorusSchiesse ]  #
 #########################################################
 
 #macro definitions
@@ -13,6 +13,3 @@ BATCH_SIZE = 128
 LEARNING_RATE = 0.0001
 LEARNING_RATE_DECAY = 0.9999
 MOMENTUM = 0.9
-MAX_EPOCH = 20
-TRAIN_SIZE = 1024
-TRAIN_TIMES = TRAIN_SIZE*MAX_EPOCH/BATCH_SIZE

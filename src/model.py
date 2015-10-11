@@ -33,7 +33,7 @@ def Update(params, gradients, velocities):
     param_updates = [ (v, v * n.MOMENTUM - n.LEARNING_RATE * g) for g, v in zip(gradients, velocities) ]
     for i in range(0, len(gradients)):
         velocities[i] = velocities[i] * n.MOMENTUM - n.LEARNING_RATE * gradients[i]
-    param_updates = [ (p, p + v) for p, v in zip(params, velocities) ]
+    param_updates.extend([ (p, p + v) for p, v in zip(params, velocities) ])
     n.LEARNING_RATE *= n.LEARNING_RATE_DECAY
     return param_updates
 
@@ -57,21 +57,20 @@ y_hat = y_shared[batch_index * n.BATCH_SIZE : (batch_index + 1) * n.BATCH_SIZE].
 
 # inputs for validation set & testing
 x_test = T.matrix(dtype=theano.config.floatX)
-y_val = T.matrix(dtype=theano.config.floatX)
 
 # parameters
 W1 = theano.shared(np.random.randn(n.NEURONS_PER_LAYER, n.INPUT_DIM).astype(dtype=theano.config.floatX)/np.sqrt(n.INPUT_DIM))
 b1 = theano.shared(np.random.randn(n.NEURONS_PER_LAYER).astype(dtype=theano.config.floatX))
-v_W1 = T.zeros_like(W1, dtype=theano.config.floatX)
-v_b1 = T.zeros_like(b1, dtype=theano.config.floatX)
+v_W1 = theano.shared(np.zeros((n.NEURONS_PER_LAYER, n.INPUT_DIM)).astype(dtype=theano.config.floatX))
+v_b1 = theano.shared(np.zeros(n.NEURONS_PER_LAYER).astype(dtype=theano.config.floatX))
 #W2 = theano.shared(np.random.randn(n.NEURONS_PER_LAYER, n.NEURONS_PER_LAYER).astype(dtype=theano.config.floatX)/np.sqrt(n.INPUT_DIM))
 #b2 = theano.shared(np.random.randn(n.NEURONS_PER_LAYER).astype(dtype=theano.config.floatX))
 #W3 = theano.shared(np.random.randn(n.NEURONS_PER_LAYER, n.NEURONS_PER_LAYER).astype(dtype=theano.config.floatX)/np.sqrt(n.INPUT_DIM))
 #b3 = theano.shared(np.random.randn(n.NEURONS_PER_LAYER).astype(dtype=theano.config.floatX))
 W = theano.shared(np.random.randn(n.OUTPUT_DIM, n.NEURONS_PER_LAYER).astype(dtype=theano.config.floatX)/np.sqrt(n.INPUT_DIM))
 b = theano.shared(np.random.randn(n.OUTPUT_DIM).astype(dtype=theano.config.floatX))
-v_W = T.zeros_like(W, dtype=theano.config.floatX)
-v_b = T.zeros_like(b, dtype=theano.config.floatX)
+v_W = theano.shared(np.zeros((n.OUTPUT_DIM,n.NEURONS_PER_LAYER)).astype(dtype=theano.config.floatX))
+v_b = theano.shared(np.zeros(n.OUTPUT_DIM).astype(dtype=theano.config.floatX))
 
 #params = [W1, b1, W2, b2, W3, b3, W, b]
 params = [W1, b1, W, b]
