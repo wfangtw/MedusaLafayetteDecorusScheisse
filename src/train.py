@@ -5,12 +5,13 @@
 #   Author:	    [ MedusaLafayetteDecorusSchiesse]   #
 #########################################################
 
+import macros as n
 import model as dnn
 import numpy as np
 import theano
 import theano.tensor as T
-import macros as n
 import time
+import random
 from itertools import izip
 
 
@@ -52,9 +53,12 @@ def TestTrain():
 
 
 #For Training Result Evaluation
-#can be added in training cycle to preevent overfitting
-def Accuracy():
-    pass
+#can be added in training cycle to prevent overfitting
+def Accuracy(val_x, val_y):
+    pred_y = np.asarray(dnn.predict(val_x))
+    real_y = val_y.argmax(axis=0)
+    err = np.count_nonzero(real_y-pred_y)
+    return (real_y.size - err)/float(real_y.size)
 
 #Testing a subset of Test set with train tag (trg)
 #is set to trg if testing the whole set
@@ -79,14 +83,26 @@ def Accuracy():
 #test_x,test_y = SharedDataset(data_xy[0])
 #validate_x,validate_y = SharedDataset(data_xy[1])
 #Training
+f = open('../training_data/smallset.dev','r')
+val_data_x, val_data_y = eval(f.read())
+val_x = np.array(val_data_x).astype(theano.config.floatX).T
+val_y = np.array(val_data_y).astype(theano.config.floatX).T
 start_time = time.time()
 #print train_size
+batch_indices = range(0, dnn.train_size/n.BATCH_SIZE)
 for i in range(0, n.MAX_EPOCH):
-    for j in range(0, dnn.train_size/n.BATCH_SIZE):
+    print("EPOCH: " + str(i+1))
+    random.shuffle(batch_indices)
+    iteration = 1
+    for j in batch_indices:
+        print("iteration: " + str(iteration))
+        print("batch_idx: " + str(j))
         y, c = dnn.train_batch(j)
-        print("iteration: " + str(j))
+        dev_acc = Accuracy(val_x,val_y)
+        print("dev accuracy: " + str(dev_acc))
         #print(y)
         print("cost: " + str(c))
+        iteration += 1
 end_time = time.time()
 print("Total time: " + str(end_time-start_time))
 

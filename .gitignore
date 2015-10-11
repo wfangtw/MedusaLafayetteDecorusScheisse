@@ -8,5 +8,5 @@ test*
 *.tgz
 data
 training_data
-smallset.in
+smallset*
 debug*
