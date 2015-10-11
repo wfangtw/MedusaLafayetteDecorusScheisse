@@ -1,19 +1,22 @@
 #########################################################
 #   FileName:	    [ train.py ]			#
 #   PackageName:    []					#
-#   Sypnosis:	    [ Train DNN model ]			#
+#   Synopsis:	    [ Train DNN model ]			#
 #   Author:	    [ MedusaLafayetteDecorusSchiesse]   #
 #########################################################
+
+import time
+start_time = time.time()
 
 import macros as n
 import model as dnn
 import numpy as np
 import theano
 import theano.tensor as T
-import time
 import random
 import math
 from itertools import izip
+import sys
 
 #####################
 #   Main functions  #
@@ -32,28 +35,64 @@ def Accuracy(val_x, val_y):
 #######################
 
 # Load Test and Dev Data
-f = open('../training_data/smallset.dev','r')
+print("Current time: " + str(time.time()-start_time))
+print("Loading dev data...")
+f = open('../training_data/dev.in','r')
 val_data_x, val_data_y = eval(f.read())
 val_x = np.array(val_data_x).astype(theano.config.floatX).T
 val_y = np.array(val_data_y).astype(theano.config.floatX).T
+f.close()
+
+print("Current time: " + str(time.time()-start_time))
+print("Loading test data...")
+f = open('../training_data/test.in','r')
+test_data_x, test_id = eval(f.read())
+test_x = np.array(test_data_x).astype(theano.config.floatX).T
+f.close()
 
 #Training
-start_time = time.time()
+print("Current time: " + str(time.time()-start_time))
+print("Start training")
 batch_indices = range(0, int(math.ceil(dnn.train_size/n.BATCH_SIZE)))
 for i in range(0, n.MAX_EPOCH):
     print("EPOCH: " + str(i+1))
     random.shuffle(batch_indices)
     iteration = 1
     for j in batch_indices:
-        print("iteration: " + str(iteration))
+        #print("iteration: " + str(iteration))
         #print("batch_idx: " + str(j))
         y, c = dnn.train_batch(j)
         #print(y)
-        print("cost: " + str(c))
+        #print("cost: " + str(c))
+        if math.isnan(c):
+            print("nan error!!!")
+            sys.exit()
         iteration += 1
     dev_acc = Accuracy(val_x,val_y)
     print("dev accuracy: " + str(dev_acc))
-
-end_time = time.time()
-print("Total time: " + str(end_time-start_time))
+    print("Current time: " + str(time.time()-start_time))
 dnn.save_model()
+
+# Create Phone Map
+f = open('../data/phones/48_39.map','r')
+phone_map = {}
+i = 0
+for l in f:
+    instance = l.split('\t')[0]
+    phone_map[i] = instance
+    i += 1
+f.close()
+
+# Testing
+print("Start Testing")
+y = np.asarray(dnn.predict(test_x)).tolist()
+print("Current time: " + str(time.time()-start_time))
+
+# Write prediction
+f = open('../predictions/raw_prediction.csv','w')
+f.write('Id,Prediction\n')
+for i in range(0, len(y)):
+    f.write(test_id[i] + ',' + str(phone_map[y[i]]))
+f.close()
+
+print("Total time: " + str(time.time()-start_time))

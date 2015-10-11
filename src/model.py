@@ -1,7 +1,7 @@
 #########################################################
 #   FileName:	    [ model.py ]			#
 #   PackageName:    []					#
-#   Sypnosis:	    [ Define DNN model ]		#
+#   Synopsis:	    [ Define DNN model ]		#
 #   Author:	    [ MedusaLafayetteDecorusSchiesse]   #
 #########################################################
 
@@ -11,7 +11,8 @@ import theano.tensor as T
 import macros as n
 import cPickle
 
-f = open('../training_data/smallset.train')
+print("Loading training data...")
+f = open('../training_data/train.in')
 train_xy = eval(f.read())
 train_size = len(train_xy[0])
 
@@ -116,10 +117,11 @@ train_batch = theano.function(
         )
 
 # test
-test = theano.function(
-	inputs=[x_test],
-	outputs=[y_t]
-	)
+#test = theano.function(
+#	inputs=[x_test],
+#	outputs=[y_t]
+#	)
+
 # predict
 predict = theano.function(
         inputs=[x_test],
