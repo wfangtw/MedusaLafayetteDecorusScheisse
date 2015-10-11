@@ -17,6 +17,7 @@ import random
 import math
 from itertools import izip
 import sys
+import cPickle
 
 #####################
 #   Main functions  #
@@ -36,6 +37,7 @@ def Accuracy(val_x, val_y):
 
 # Load Test and Dev Data
 print("Current time: " + str(time.time()-start_time))
+print("===============================")
 print("Loading dev data...")
 with open('../training_data/simple/dev.in','r') as f:
     val_data_x, val_data_y = cPickle.load(f)
@@ -43,6 +45,7 @@ val_x = np.array(val_data_x).astype(theano.config.floatX).T
 val_y = np.array(val_data_y).astype(theano.config.floatX).T
 
 print("Current time: " + str(time.time()-start_time))
+print("===============================")
 print("Loading test data...")
 with open('../training_data/simple/test.in','r') as f:
     test_data_x, test_id = cPickle.load(f)
@@ -50,9 +53,13 @@ test_x = np.array(test_data_x).astype(theano.config.floatX).T
 
 #Training
 print("Current time: " + str(time.time()-start_time))
+print("===============================")
 print("Start training")
 batch_indices = range(0, int(math.ceil(dnn.train_size/n.BATCH_SIZE)))
-for i in range(0, n.MAX_EPOCH):
+i = 0
+dev_acc = []
+while True:
+    print("===============================")
     print("EPOCH: " + str(i+1))
     random.shuffle(batch_indices)
     iteration = 1
@@ -66,9 +73,14 @@ for i in range(0, n.MAX_EPOCH):
             print("nan error!!!")
             sys.exit()
         iteration += 1
-    dev_acc = Accuracy(val_x,val_y)
-    print("dev accuracy: " + str(dev_acc))
+    dev_acc.append(Accuracy(val_x,val_y))
+    print("dev accuracy: " + str(dev_acc[-1]))
     print("Current time: " + str(time.time()-start_time))
+    if i != 0 and dev_acc[-1] - dev_acc[-2] < 0.00005:
+        break
+    i += 1
+print("===============================")
+print dev_acc
 dnn.save_model()
 
 # Create Phone Map
@@ -82,6 +94,7 @@ for l in f:
 f.close()
 
 # Testing
+print("===============================")
 print("Start Testing")
 y = np.asarray(dnn.predict(test_x)).tolist()
 print("Current time: " + str(time.time()-start_time))
@@ -89,8 +102,10 @@ print("Current time: " + str(time.time()-start_time))
 # Write prediction
 f = open('../predictions/raw_prediction.csv','w')
 f.write('Id,Prediction\n')
-for i in range(0, len(y)):
-    f.write(test_id[i] + ',' + str(phone_map[y[i]]))
+for i in range(0, len(y[0])):
+    f.write(test_id[i] + ',' + phone_map[y[0][i]] + '\n')
 f.close()
 
+print("===============================")
 print("Total time: " + str(time.time()-start_time))
+print("===============================")

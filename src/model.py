@@ -10,14 +10,11 @@ import theano
 import theano.tensor as T
 import macros as n
 import cPickle
-
+print("===============================")
 print("Loading training data...")
 with open('../training_data/simple/train.in') as f:
-    print "aaa"
     train_xy = cPickle.load(f)
-print "bbb"
 train_size = len(train_xy[0])
-print "ccc"
 
 ########################
 # function definitions #
