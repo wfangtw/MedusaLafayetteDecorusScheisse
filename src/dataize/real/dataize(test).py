@@ -3,7 +3,7 @@ import numpy as np
 import random
 import sys
 
-test_ip = []    # [ [39 dim], [39 dim], ... ]
+test_ip = []    # [ [279 dim], [279 dim], ... ]
 test_op = []    # [ instant_ID, instant_ID, ... ]
 
 ## statistic of male and female
@@ -39,9 +39,14 @@ f_mfcc = open("/project/peskotiveswf/Workspace/MLDS_hw1/data/mfcc/test.ark", "r"
 
 for line in f_mfcc:
     l = line.strip(' \n').split(' ')
-    dim_39 = l[1:]
-    dim_39 = map(float, dim_39)
-    test_ip.append(dim_39)
+
+    dim_279 = []
+    for index in range(5, len(l)-4):
+        for x in range(9):
+            dim_279.append(l[index-4+x])
+
+    dim_279 = map(float, dim_279)
+    test_ip.append(dim_279)
     test_op.append(l[0])
 f_mfcc.close()
 
@@ -54,6 +59,6 @@ test_ip = (test_ip - mean) / std
 # write to file
 test = (test_ip.tolist(), test_op)
 
-f_test = open("/project/peskotiveswf/Workspace/MLDS_hw1/training_data/simple/test.in", "w")
+f_test = open("/project/peskotiveswf/Workspace/MLDS_hw1/training_data/real/test.in", "w")
 f_test.write(str(test))
 f_test.close()
