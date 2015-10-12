@@ -9,7 +9,7 @@ import time
 start_time = time.time()
 
 import macros as n
-import model as dnn
+from model import DNN
 import numpy as np
 import theano
 import theano.tensor as T
@@ -31,25 +31,56 @@ def Accuracy(val_x, val_y):
     err = np.count_nonzero(real_y-pred_y)
     return (real_y.size - err)/float(real_y.size)
 
+def TrainBatch(index):
+    batch_index = T.lscalar()
+    x = DNN.x_shared[batch_index * n.BATCH_SIZE : (batch_index + 1) * n.BATCH_SIZE].T
+    y_hat = DNN.y_shared[batch_index * n.BATCH_SIZE : (batch_index + 1) * n.BATCH_SIZE].T
+
+
+
 #######################
 #   Train and Test    #
 #######################
 
-# Load Test and Dev Data
+x_shared = theano.shared(np.zeros((1124823, 39)).astype(dtype=theano.config.floatX))
+y_shared = theano.shared(np.zeros(1124823, 48).astype(dtype=theano.config.floatX))
+
+def LoadData(filename, load_type):
+    with open(filename,'r') as f:
+        if load_type == 'train' or load_type == 'dev'
+            data_x, data_y = cPickle.load(f)
+            shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX))
+            shared_y = theano.shared(np.asarray(data_y, dtype=theano.config.floatX))
+            return shared_x, shared_y
+        else:
+            data_x, test_id = cPickle.load(f)
+            shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX))
+            return shared_x, test_id
+
+# Load Training data
+print("===============================")
+print("Loading training data...")
+train_x, train_y = LoadData(sys.argv[1],'train')
 print("Current time: " + str(time.time()-start_time))
+
+# Load Dev data
 print("===============================")
 print("Loading dev data...")
-with open('../training_data/simple/dev.in','r') as f:
-    val_data_x, val_data_y = cPickle.load(f)
-val_x = np.array(val_data_x).astype(theano.config.floatX).T
-val_y = np.array(val_data_y).astype(theano.config.floatX).T
-
+val_x, val_y = LoadData(sys.argv[2],'dev')
 print("Current time: " + str(time.time()-start_time))
+
+# Load Test data
 print("===============================")
 print("Loading test data...")
-with open('../training_data/simple/test.in','r') as f:
-    test_data_x, test_id = cPickle.load(f)
-test_x = np.array(test_data_x).astype(theano.config.floatX).T
+test_x, test_id = LoadData(sys.argv[3],'train')
+
+# Compile theano models
+# inputs for batch training
+batch_index = T.lscalar()
+x = x_shared[batch_index * n.BATCH_SIZE : (batch_index + 1) * n.BATCH_SIZE].T
+y_hat = y_shared[batch_index * n.BATCH_SIZE : (batch_index + 1) * n.BATCH_SIZE].T
+# inputs for validation set & testing
+x_test = T.matrix(dtype=theano.config.floatX)
 
 #Training
 print("Current time: " + str(time.time()-start_time))

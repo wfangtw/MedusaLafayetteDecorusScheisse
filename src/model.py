@@ -9,24 +9,13 @@ import numpy as np
 import theano
 import theano.tensor as T
 import macros as n
+from logreg import LogisticRegression
 import cPickle
-print("===============================")
-print("Loading training data...")
-with open('../training_data/simple/train.in') as f:
-    train_xy = cPickle.load(f)
 train_size = len(train_xy[0])
 
 ########################
 # function definitions #
 ########################
-
-# activation functions
-def ReLU(x):
-    return T.switch(x < 0, 0.01*x, x)
-
-def SoftMax(vec):
-    vec = T.exp(vec)
-    return vec / vec.sum(axis=0)
 
 # utility functions
 def Update(params, gradients, velocities):
@@ -37,11 +26,64 @@ def Update(params, gradients, velocities):
     n.LEARNING_RATE *= n.LEARNING_RATE_DECAY
     return param_updates
 
-def SharedDataset(data_xy):
-    data_x, data_y = data_xy
-    shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX))
-    shared_y = theano.shared(np.asarray(data_y, dtype=theano.config.floatX))
-    return shared_x, shared_y
+class DNN:
+
+    def __init__(self):
+        self.params = []
+        self.dparams = []
+        self.velocities = []
+
+    def init(self, hidden_layers):
+        # parameters
+        W1 = theano.shared(np.random.randn(n.NEURONS_PER_LAYER, n.INPUT_DIM).astype(dtype=theano.config.floatX)/np.sqrt(n.INPUT_DIM))
+        b1 = theano.shared(np.random.randn(n.NEURONS_PER_LAYER).astype(dtype=theano.config.floatX))
+        v_W1 = theano.shared(np.zeros((n.NEURONS_PER_LAYER, n.INPUT_DIM)).astype(dtype=theano.config.floatX))
+        v_b1 = theano.shared(np.zeros(n.NEURONS_PER_LAYER).astype(dtype=theano.config.floatX))
+        self.params.append(W1)
+        self.params.append(b1)
+        self.velocities.append(v_W1)
+        self.velocities.append(v_b1)
+        for i in range(0, layers-1):
+            W2 = theano.shared(np.random.randn(n.NEURONS_PER_LAYER, n.NEURONS_PER_LAYER).astype(dtype=theano.config.floatX)/np.sqrt(n.NEURONS_PER_LAYER))
+            b2 = theano.shared(np.random.randn(n.NEURONS_PER_LAYER).astype(dtype=theano.config.floatX))
+            v_W2 = theano.shared(np.zeros((n.NEURONS_PER_LAYER, n.NEURONS_PER_LAYER)).astype(dtype=theano.config.floatX))
+            v_b2 = theano.shared(np.zeros(n.NEURONS_PER_LAYER).astype(dtype=theano.config.floatX))
+            self.params.append(W2)
+            self.params.append(b2)
+            self.velocities.append(v_W2)
+            self.velocities.append(v_b2)
+
+        W = theano.shared(np.random.randn(n.OUTPUT_DIM, n.NEURONS_PER_LAYER).astype(dtype=theano.config.floatX)/np.sqrt(n.NEURONS_PER_LAYER))
+        b = theano.shared(np.random.randn(n.OUTPUT_DIM).astype(dtype=theano.config.floatX))
+        v_W = theano.shared(np.zeros((n.OUTPUT_DIM,n.NEURONS_PER_LAYER)).astype(dtype=theano.config.floatX))
+        v_b = theano.shared(np.zeros(n.OUTPUT_DIM).astype(dtype=theano.config.floatX))
+        self.params.append(W)
+        self.params.append(b)
+        self.velocities.append(v_W)
+        self.velocities.append(v_b)
+
+        #forward propogation
+        self.a1 = relu(T.dot(self.W1,x) + self.b1.dimshuffle(0, 'x'))
+
+        self.y = softmax( T.dot(self.W,a1) + self.b.dimshuffle(0, 'x') )
+
+    def train_batch(self, x):
+        # cost function
+        cost = -T.log(T.dot(y.T, y_hat)).trace()/n.BATCH_SIZE
+        # calculate gradient
+
+        dW1, db1, dW, db = T.grad(cost, params)
+        self.dparams = [dW1, db1, dW, db]
+        #dW1, db1, dW2, db2, dW3, db3, dW, db = T.grad(cost, [W1, b1, W2, b2, W3, b3, W, b])
+        #self.dparams = [dW1, db1, dW2, db2, dW3, db3, dW, db]
+
+        train_batch = theano.function(
+                inputs=[batch_index],
+                outputs=[y, cost],
+                updates=Update(params, dparams, velocities)
+                )
+
+
 
 ###############################
 # initialize shared variables #
@@ -112,7 +154,7 @@ prediction = y_t.argmax(axis=0)
 train_batch = theano.function(
         inputs=[batch_index],
         outputs=[y, cost],
-	updates=Update(params, dparams, velocities)
+        updates=Update(params, dparams, velocities)
         )
 
 # test
