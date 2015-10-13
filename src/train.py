@@ -12,7 +12,7 @@ import random
 import math
 from itertools import izip
 
-if len(sys.argv) != 5:
+if len(sys.argv) != 6:
     print("Usage:")
     print("train.py <train-data-in> <dev-data-in> <test-data-in> <model-out> <prediction-out>")
     print("ex: train.py train.in dev.in test.in model.mdl prediction.csv")
@@ -70,7 +70,7 @@ print("Current time: " + str(time.time()-start_time))
 # Load Test data
 print("===============================")
 print("Loading test data...")
-test_x, test_id = LoadData(sys.argv[3],'train')
+test_x, test_id = LoadData(sys.argv[3],'test')
 print("Current time: " + str(time.time()-start_time))
 
 ###############
@@ -101,7 +101,7 @@ cost = (
 # compile "dev model" function
 dev_model = theano.function(
         inputs=[index],
-        outputs=classifier.error(y),
+        outputs=classifier.errors(y),
         givens={
             x: val_x[ index * n.BATCH_SIZE : (index + 1) * n.BATCH_SIZE ].T,
             y: val_y[ index * n.BATCH_SIZE : (index + 1) * n.BATCH_SIZE ].T,
@@ -159,7 +159,7 @@ while (epoch < n.EPOCHS) and training:
     epoch += 1
     print("===============================")
     print("EPOCH: " + str(epoch))
-    random.shuffle(batch_indices)
+    random.shuffle(minibatch_indices)
     for minibatch_index in minibatch_indices:
         batch_cost = train_model(minibatch_index)
         iteration = (epoch - 1) * train_num + minibatch_index
