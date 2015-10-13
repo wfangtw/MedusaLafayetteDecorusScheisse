@@ -202,7 +202,7 @@ while (epoch < n.EPOCHS) and training:
 #        (best_val_loss * 100., best_iter + 1))
 print("===============================")
 print dev_acc
-dnn.save_model(argv[4])
+classifier.save_model(argv[4])
 
 # Create Phone Map
 f = open('data/phones/48_39.map','r')
