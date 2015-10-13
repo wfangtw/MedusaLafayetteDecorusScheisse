@@ -1,61 +1,59 @@
 #########################################################
-#   FileName:	    [ train.py ]			#
-#   PackageName:    []					#
-#   Synopsis:	    [ Train DNN model ]			#
-#   Author:	    [ MedusaLafayetteDecorusSchiesse]   #
+#   FileName:       [ train.py ]                        #
+#   PackageName:    [ DNN ]                             #
+#   Synopsis:       [ Train DNN model ]                 #
+#   Author:         [ MedusaLafayetteDecorusSchiesse ]  #
 #########################################################
 
+import sys
 import time
-start_time = time.time()
-
-import macros as n
-from model import DNN
-import numpy as np
-import theano
-import theano.tensor as T
+import cPickle
 import random
 import math
 from itertools import izip
-import sys
-import cPickle
 
-#####################
-#   Main functions  #
-#####################
+if len(sys.argv) != 5:
+    print("Usage:")
+    print("train.py <train-data-in> <dev-data-in> <test-data-in> <model-out> <prediction-out>")
+    print("ex: train.py train.in dev.in test.in model.mdl prediction.csv")
+    sys.exit()
 
-#For Training Result Evaluation
-#can be added in training cycle to prevent overfitting
-def Accuracy(val_x, val_y):
-    pred_y = np.asarray(dnn.predict(val_x))
-    real_y = val_y.argmax(axis=0)
-    err = np.count_nonzero(real_y-pred_y)
-    return (real_y.size - err)/float(real_y.size)
+start_time = time.time()
 
-def TrainBatch(index):
-    batch_index = T.lscalar()
-    x = DNN.x_shared[batch_index * n.BATCH_SIZE : (batch_index + 1) * n.BATCH_SIZE].T
-    y_hat = DNN.y_shared[batch_index * n.BATCH_SIZE : (batch_index + 1) * n.BATCH_SIZE].T
+import numpy as np
+import theano
+import theano.tensor as T
 
+import trainingParams as n
+from nn.dnn import MLP
 
-
-#######################
-#   Train and Test    #
-#######################
-
-x_shared = theano.shared(np.zeros((1124823, 39)).astype(dtype=theano.config.floatX))
-y_shared = theano.shared(np.zeros(1124823, 48).astype(dtype=theano.config.floatX))
+########################
+# Function Definitions #
+########################
 
 def LoadData(filename, load_type):
     with open(filename,'r') as f:
-        if load_type == 'train' or load_type == 'dev'
+        if load_type == 'train' or load_type == 'dev':
             data_x, data_y = cPickle.load(f)
             shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX))
-            shared_y = theano.shared(np.asarray(data_y, dtype=theano.config.floatX))
+            shared_y = theano.shared(np.asarray(data_y, dtype='int32'))
             return shared_x, shared_y
         else:
             data_x, test_id = cPickle.load(f)
             shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX))
             return shared_x, test_id
+
+def Update(params, gradients, velocities):
+    param_updates = [ (v, v * n.MOMENTUM - n.LEARNING_RATE * g) for g, v in zip(gradients, velocities) ]
+    for i in range(0, len(gradients)):
+        velocities[i] = velocities[i] * n.MOMENTUM - n.LEARNING_RATE * gradients[i]
+    param_updates.extend([ (p, p + v) for p, v in zip(params, velocities) ])
+    n.LEARNING_RATE *= n.LEARNING_RATE_DECAY
+    return param_updates
+
+##################
+#   Load Data    #
+##################
 
 # Load Training data
 print("===============================")
@@ -73,55 +71,127 @@ print("Current time: " + str(time.time()-start_time))
 print("===============================")
 print("Loading test data...")
 test_x, test_id = LoadData(sys.argv[3],'train')
-
-# Compile theano models
-# inputs for batch training
-batch_index = T.lscalar()
-x = x_shared[batch_index * n.BATCH_SIZE : (batch_index + 1) * n.BATCH_SIZE].T
-y_hat = y_shared[batch_index * n.BATCH_SIZE : (batch_index + 1) * n.BATCH_SIZE].T
-# inputs for validation set & testing
-x_test = T.matrix(dtype=theano.config.floatX)
-
-#Training
 print("Current time: " + str(time.time()-start_time))
+
+###############
+# Build Model #
+###############
+
+# symbolic variables
+index = T.lscalar()
+x = T.matrix(dtype=theano.config.floatX)
+y = T.ivector()
+
+# construct MLP class
+classifier = MLP(
+        input=x,
+        n_in=n.INPUT_DIM,
+        n_hidden=n.NEURONS_PER_LAYER,
+        n_out=n.OUTPUT_DIM,
+        n_layers=n.HIDDEN_LAYERS
+)
+
+# cost + regularization terms; cost is symbolic
+cost = (
+        classifier.negative_log_likelihood(y) +
+        n.L1_REG * classifier.L1 +
+        n.L2_REG * classifier.L2_sqr
+)
+
+# compile "dev model" function
+dev_model = theano.function(
+        inputs=[index],
+        outputs=classifier.error(y),
+        givens={
+            x: val_x[ index * n.BATCH_SIZE : (index + 1) * n.BATCH_SIZE ].T,
+            y: val_y[ index * n.BATCH_SIZE : (index + 1) * n.BATCH_SIZE ].T,
+        }
+)
+
+# compile "test model" function
+test_model = theano.function(
+        inputs=[],
+        outputs=classifier.y_pred,
+        givens={
+            x: test_x
+        }
+)
+
+# gradients
+dparams = [ T.grad(cost, param) for param in classifier.params ]
+
+# compile "train model" function
+train_model = theano.function(
+        inputs=[index],
+        outputs=cost,
+        updates=Update(classifier.params, dparams, classifier.velo),
+        givens={
+            x: train_x[ index * n.BATCH_SIZE : (index + 1) * n.BATCH_SIZE ].T,
+            y: train_y[ index * n.BATCH_SIZE : (index + 1) * n.BATCH_SIZE ].T,
+        }
+)
+
+###############
+# Train Model #
+###############
+
 print("===============================")
 print("Start training")
-batch_indices = range(0, int(math.ceil(dnn.train_size/n.BATCH_SIZE)))
-i = 0
+
+train_num = int(math.ceil(train_x.shape[0].eval()/n.BATCH_SIZE))
+print("iters per epoch: " + str(train_num))
+minibatch_indices = range(0, train_num)
+epoch = 0
+
+patience = 10000
+patience_inc = 2
+improvent_threshold = 0.995
+
+best_val_loss = np.inf
+best_iter = 0
+test_score = 0
+
+training = True
+val_freq = min(train_num, patience)
 dev_acc = []
 #combo = 0
-#while True:
-for i in range(0, 70):
+while (epoch < n.EPOCHS) and training:
+    epoch += 1
     print("===============================")
-    print("EPOCH: " + str(i+1))
+    print("EPOCH: " + str(epoch))
     random.shuffle(batch_indices)
-    iteration = 1
-    for j in batch_indices:
-        #print("iteration: " + str(iteration))
-        #print("batch_idx: " + str(j))
-        y, c = dnn.train_batch(j)
-        #print(y)
-        #print("cost: " + str(c))
-        if math.isnan(c):
+    for minibatch_index in minibatch_indices:
+        batch_cost = train_model(minibatch_index)
+        iteration = (epoch - 1) * train_num + minibatch_index
+        if (iteration + 1) % val_freq == 0:
+            val_losses = [ dev_model(i) in xrange(0, train_num) ]
+            this_val_loss = np.mean(val_losses)
+            if this_val_loss < best_val_loss:
+                if this_val_loss < best_val_loss * improvement_threshold:
+                    patience = max(patience, iteration * patience_inc)
+                best_val_loss = this_val_loss
+                best_iter = iteration
+            if patience <= iteration:
+                training = False
+                break
+        print("cost: " + str(batch_cost))
+        if math.isnan(batch_cost):
             print("nan error!!!")
             sys.exit()
-        iteration += 1
-    dev_acc.append(Accuracy(val_x,val_y))
+    val_size = val_y.shape[0].eval
+    val_losses = sum([ dev_model(i) in xrange(0, train_num) ])
+    dev_acc.append((val_size-val_losses)/val_size)
     print("dev accuracy: " + str(dev_acc[-1]))
     print("Current time: " + str(time.time()-start_time))
-    #if i != 0 and dev_acc[-1] - dev_acc[-2] < 0.00005:
-    #    combo += 1
-    #    if combo == 5:
-    #        break
-    #else:
-    #    combo = 0
-    #i += 1
+print(('Optimization complete. Best validation score of %f %% '
+        'obtained at iteration %i') %
+        (best_val_loss * 100., best_iter + 1))
 print("===============================")
 print dev_acc
-dnn.save_model()
+dnn.save_model(argv[4])
 
 # Create Phone Map
-f = open('../data/phones/48_39.map','r')
+f = open('data/phones/48_39.map','r')
 phone_map = {}
 i = 0
 for l in f:
@@ -132,14 +202,14 @@ f.close()
 # Testing
 print("===============================")
 print("Start Testing")
-y = np.asarray(dnn.predict(test_x)).tolist()
+y = np.asarray(test_model()).tolist()
 print("Current time: " + str(time.time()-start_time))
 
 # Write prediction
-f = open('../predictions/raw_prediction.csv','w')
+f = open(sys.argv[5],'w')
 f.write('Id,Prediction\n')
 for i in range(0, len(y[0])):
-    f.write(test_id[i] + ',' + phone_map[y[0][i]] + '\n')
+    f.write(test_id[i] + ',' + phone_map[y[i]] + '\n')
 f.close()
 
 print("===============================")
