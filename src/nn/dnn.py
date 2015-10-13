@@ -1,8 +1,8 @@
 #########################################################
-#   FileName:	    [ dnn.py ]			#
-#   PackageName:    [ DNN ]					#
-#   Synopsis:	    [ Define DNN model ]		#
-#   Author:	    [ MedusaLafayetteDecorusSchiesse]   #
+#   FileName:       [ dnn.py ]                          #
+#   PackageName:    [ DNN ]                             #
+#   Synopsis:       [ Define DNN model ]                #
+#   Author:         [ MedusaLafayetteDecorusSchiesse]   #
 #########################################################
 
 import numpy as np

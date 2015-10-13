@@ -1,8 +1,8 @@
 #############################################################
-#   FileName:	    [ logistic.py ]			    #
-#   PackageName:    [ DNN ]				    #
-#   Synopsis:	    [ Define logistic regression layer ]    #
-#   Author:	    [ MedusaLafayetteDecorusSchiesse ]      #
+#   FileName:       [ logistic.py ]                         #
+#   PackageName:    [ DNN ]                                 #
+#   Synopsis:       [ Define logistic regression layer ]    #
+#   Author:         [ MedusaLafayetteDecorusSchiesse ]      #
 #############################################################
 
 import numpy as np
@@ -28,7 +28,7 @@ class LogisticRegression:
         self.input = input
 
     def negative_log_likelihood(self, y):
-        return -T.mean(T.log(self.y)[y,T.arange(y.shape[1])])
+        return -T.mean(T.log(self.y)[y,T.arange(y.shape[0])])
 
     def errors(self, y):
         # check if y has same dimension of y_pred

@@ -1,8 +1,8 @@
 #########################################################
-#   FileName:	    [ trainingParams.py ]		            	#
-#   PackageName:    [ DNN ]					                #
-#   Sypnosis:	    [ Define macros ]			        #
-#   Author:	        [ MedusaLafayetteDecorusSchiesse ]  #
+#   FileName:       [ trainingParams.py ]               #
+#   PackageName:    [ DNN ]                             #
+#   Sypnosis:       [ Define macros ]                   #
+#   Author:         [ MedusaLafayetteDecorusSchiesse ]  #
 #########################################################
 
 #macro definitions

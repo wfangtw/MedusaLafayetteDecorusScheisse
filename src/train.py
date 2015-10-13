@@ -136,10 +136,22 @@ train_model = theano.function(
 ###############
 
 print("===============================")
-print("Start training")
+print("            TRAINING")
+print("===============================")
 
-train_num = int(math.ceil(train_x.shape[0].eval()/n.BATCH_SIZE))
-print("iters per epoch: " + str(train_num))
+train_num = int(math.ceil(train_y.shape[0].eval()/n.BATCH_SIZE))
+val_num = int(math.ceil(val_y.shape[0].eval()/n.BATCH_SIZE))
+print("Input dimension: %i" % n.INPUT_DIM)
+print("# of layers: %i" % n.HIDDEN_LAYERS)
+print("# of neurons per layer: %i" % n.NEURONS_PER_LAYER)
+print("Output dimension: %i" % n.OUTPUT_DIM)
+print("Batch size: %i" % n.BATCH_SIZE)
+print("Learning rate: %f" % n.LEARNING_RATE)
+print("Learning rate decay: %f" % n.LEARNING_RATE_DECAY)
+print("Momentum: %f" % n.MOMENTUM)
+print("Max epochs: %i" % n.EPOCHS)
+print("iters per epoch: %i" % train_num)
+print("validation size: %i" % val_y.shape[0].eval())
 minibatch_indices = range(0, train_num)
 epoch = 0
 
@@ -163,29 +175,31 @@ while (epoch < n.EPOCHS) and training:
     for minibatch_index in minibatch_indices:
         batch_cost = train_model(minibatch_index)
         iteration = (epoch - 1) * train_num + minibatch_index
+        '''
         if (iteration + 1) % val_freq == 0:
-            val_losses = [ dev_model(i) in xrange(0, train_num) ]
+            val_losses = [ dev_model(i) for i in xrange(0, train_num) ]
             this_val_loss = np.mean(val_losses)
             if this_val_loss < best_val_loss:
                 if this_val_loss < best_val_loss * improvement_threshold:
                     patience = max(patience, iteration * patience_inc)
                 best_val_loss = this_val_loss
+    val_size = val_y.shape[0].eval()
                 best_iter = iteration
             if patience <= iteration:
                 training = False
                 break
-        print("cost: " + str(batch_cost))
-        if math.isnan(batch_cost):
-            print("nan error!!!")
-            sys.exit()
-    val_size = val_y.shape[0].eval
-    val_losses = sum([ dev_model(i) in xrange(0, train_num) ])
-    dev_acc.append((val_size-val_losses)/val_size)
+        '''
+    print("cost: " + str(batch_cost))
+    if math.isnan(batch_cost):
+        print("nan error!!!")
+        sys.exit()
+    val_acc = 1 - np.mean([ dev_model(i) for i in xrange(0, val_num) ])
+    dev_acc.append(val_acc)
     print("dev accuracy: " + str(dev_acc[-1]))
     print("Current time: " + str(time.time()-start_time))
-print(('Optimization complete. Best validation score of %f %% '
-        'obtained at iteration %i') %
-        (best_val_loss * 100., best_iter + 1))
+#print(('Optimization complete. Best validation score of %f %% '
+#        'obtained at iteration %i') %
+#        (best_val_loss * 100., best_iter + 1))
 print("===============================")
 print dev_acc
 dnn.save_model(argv[4])

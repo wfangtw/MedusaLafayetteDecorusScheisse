@@ -1,8 +1,8 @@
 #########################################################
-#   FileName:	    [ activation.py ]			#
-#   PackageName:    [ DNN]					#
-#   Synopsis:	    [ Define activation functions ]		#
-#   Author:	    [ MedusaLafayetteDecorusSchiesse]   #
+#   FileName:       [ activation.py ]                   #
+#   PackageName:    [ DNN ]                             #
+#   Synopsis:       [ Define activation functions ]     #
+#   Author:         [ MedusaLafayetteDecorusSchiesse ]  #
 #########################################################
 
 import theano
