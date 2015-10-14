@@ -1,10 +1,13 @@
 #!/usr/bin/python
 import numpy as np
+import cPickle
 import random
 import sys
 
-test_ip = []    # [ [279 dim], [279 dim], ... ]
+test_ip = []    # [ [39 dim], [39 dim], ... ]
 test_op = []    # [ instant_ID, instant_ID, ... ]
+
+label_dim = {}  # label frame
 
 ## statistic of male and female
 #label_male = {}
@@ -35,23 +38,42 @@ test_op = []    # [ instant_ID, instant_ID, ... ]
 ##    print key + ": " + str(len(value))             # every data has 8 sentences
 
 # parse mfcc/test.ark
-f_mfcc = open("/project/peskotiveswf/Workspace/MLDS_hw1/data/mfcc/test.ark", "r")
+f_mfcc = open("../../../data/mfcc/test.ark", "r")
 
 for line in f_mfcc:
     l = line.strip(' \n').split(' ')
+    ll = l[0].split('_')
+    id_name = ll[0]+'_'+ll[1]
 
-    dim_279 = []
-    for index in range(5, len(l)-4):
-        for x in range(9):
-            dim_279.append(l[index-4+x])
-
-    dim_279 = map(float, dim_279)
-    test_ip.append(dim_279)
-    test_op.append(l[0])
+    if id_name in label_dim:
+        label_dim[id_name].append(l[1:])
+    else:
+        label_dim[id_name] = [l[1:]]
 f_mfcc.close()
 
+train_ip = []
+
+for flabel in label_dim:
+    dim_351 = []
+    for x in range(6):
+        dim_351.extend(label_dim[flabel][0])
+    for x in range(3):
+        dim_351.extend(label_dim[flabel][1+x])
+    for x in range(len(label_dim[flabel])):
+        if x >= len(label_dim[flabel])-4:
+            dim_351.extend(label_dim[flabel][-1])
+        else:
+            dim_351.extend(label_dim[flabel][x+4])
+        for y in range(39):
+            dim_351.pop(0)
+
+        dim_351 = map(float, dim_351)
+        test_ip.append(dim_351)
+        test_op.append(flabel+'_'+str(x+1))
+
+
 # normalize test_ip
-test_ip = np.array(test_ip)
+test_ip = np.array(test_ip).astype(dtype=np.float64)
 mean = np.mean(test_ip, axis=0, dtype=np.float64, keepdims=True)
 std = np.std(test_ip, axis=0, dtype=np.float64, ddof=1, keepdims=True)
 test_ip = (test_ip - mean) / std
@@ -59,6 +81,5 @@ test_ip = (test_ip - mean) / std
 # write to file
 test = (test_ip.tolist(), test_op)
 
-f_test = open("/project/peskotiveswf/Workspace/MLDS_hw1/training_data/real/test.in", "w")
-f_test.write(str(test))
-f_test.close()
+with open("../../../training_data/real/test.in", "w") as f_test:
+    cPickle.dump(test, f_test)

@@ -73,9 +73,11 @@ for line in f_mfcc:
     if l[0].split('_')[0] in label_dev:
         dev_ip.append(dim_39)
         dev_op.append(dim_48)
+        #dev_op.append(map_48_num[label[l[0]]])
     else:
         train_ip.append(dim_39)
         train_op.append(dim_48)
+        #train_op.append(map_48_num[label[l[0]]])
 f_mfcc.close()
 
 # normalize train_ip
@@ -94,7 +96,7 @@ dev_ip = (dev_ip - dev_mean) / dev_std
 train = (train_ip.tolist(), train_op)
 dev = (dev_ip.tolist(), dev_op)
 
-with open("../../../training_data/simple/train.in", "w") as f_train:
+with open("../../../training_data/simple/train_old.in", "w") as f_train:
     cPickle.dump(train, f_train)
-with open("../../../training_data/simple/dev.in", "w") as f_dev:
+with open("../../../training_data/simple/dev_old.in", "w") as f_dev:
     cPickle.dump(dev, f_dev)
