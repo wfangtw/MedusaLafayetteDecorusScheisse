@@ -13,7 +13,7 @@ import activation as a
 import cPickle
 
 class HiddenLayer:
-    def __init__(self, input, n_in, n_out, W=None, b=None, v_W=None, v_b=None, activation=a.relu):
+    def __init__(self, input, n_in, n_out, W=None, b=None, v_W=None, v_b=None, d_rate, activation=a.relu):
         self.input = input
         if W is None:
             W = theano.shared(np.random.randn(n_out, n_in).astype(dtype=theano.config.floatX)/np.sqrt(n_in))
@@ -37,7 +37,7 @@ class HiddenLayer:
         self.velo = [self.v_W, self.v_b]
 
 class MLP:
-    def __init__(self, input, n_in, n_hidden, n_out, n_layers):
+    def __init__(self, input, n_in, n_hidden, n_out, n_layers, drop_out):
         # hidden layers
         self.params = []
         self.hiddenLayers = []
@@ -47,7 +47,9 @@ class MLP:
                     input=input,
                     n_in=n_in,
                     n_out=n_hidden,
+					d_rate=drop_out
                     activation=a.relu
+					
                 )
         )
         self.params.extend(self.hiddenLayers[0].params)

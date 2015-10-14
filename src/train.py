@@ -36,6 +36,8 @@ parser.add_argument('--learning-rate', type=float, default=0.0001,
 					help='learning rate of gradient descent')
 parser.add_argument('--learning-rate-decay', type=float, default=1.,
 					help='learning rate decay')
+parser.add_argument('--drop-out-rate', type=float, default=0, metavar='d-rate',
+					help='dropout: letting some neurons to be exactly fucked up.')
 parser.add_argument('--momentum', type=float, default=0.,
 					help='momentum in gradient descent')
 parser.add_argument('--l1-reg', type=float, default=0.,
@@ -52,6 +54,8 @@ parser.add_argument('model_out', type=str, metavar='model-out',
 					help='the output file name you want for the output model')
 parser.add_argument('prediction_out', type=str, metavar='pred-out',
 					help='the output file name you want for the output predictions')
+
+
 args = parser.parse_args()
 
 INPUT_DIM = args.input_dim
@@ -63,6 +67,7 @@ BATCH_SIZE = args.batch_size
 LEARNING_RATE = args.learning_rate
 LEARNING_RATE_DECAY = args.learning_rate_decay
 MOMENTUM = args.momentum
+DROPOUT_RATE = args.drop_out_rate
 L1_REG = args.l1_reg
 L2_REG = args.l2_reg
 
@@ -135,6 +140,7 @@ classifier = MLP(
         n_hidden=NEURONS_PER_LAYER,
         n_out=OUTPUT_DIM,
         n_layers=HIDDEN_LAYERS
+		drop_out=DROPOUT_RATE
 )
 
 # cost + regularization terms; cost is symbolic
