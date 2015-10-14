@@ -20,37 +20,37 @@ import theano.tensor as T
 from nn.dnn import MLP
 
 parser = argparse.ArgumentParser(prog='train.py', description='Train DNN for Phone Classification.')
-parser.add_argument('--input-dim', nargs=1, type=int, required=True, metavar='nIn',
+parser.add_argument('--input-dim', type=int, required=True, metavar='nIn',
 					help='input dimension of network')
-parser.add_argument('--output-dim', nargs=1, type=int, required=True, metavar='nOut',
+parser.add_argument('--output-dim', type=int, required=True, metavar='nOut',
 					help='output dimension of network')
-parser.add_argument('--hidden-layers', nargs=1, type=int, required=True, metavar='nLayers',
+parser.add_argument('--hidden-layers', type=int, required=True, metavar='nLayers',
 					help='number of hidden layers')
-parser.add_argument('--neurons-per-layer', nargs=1, type=int, required=True, metavar='nNeurons',
+parser.add_argument('--neurons-per-layer', type=int, required=True, metavar='nNeurons',
 					help='number of neurons in a hidden layer')
-parser.add_argument('--max-epochs', nargs=1, type=int, required=True, metavar='nEpochs',
+parser.add_argument('--max-epochs', type=int, required=True, metavar='nEpochs',
 					help='number of maximum epochs')
-parser.add_argument('--batch-size', nargs=1, type=int, default=1,
+parser.add_argument('--batch-size', type=int, default=1,
 					help='size of minibatch')
-parser.add_argument('--learning-rate', nargs=1, type=float, default=0.0001,
+parser.add_argument('--learning-rate', type=float, default=0.0001,
 					help='learning rate of gradient descent')
-parser.add_argument('--learning-rate-decay', nargs=1, type=float, default=1.,
+parser.add_argument('--learning-rate-decay', type=float, default=1.,
 					help='learning rate decay')
-parser.add_argument('--momentum', nargs=1, type=float, default=0.,
+parser.add_argument('--momentum', type=float, default=0.,
 					help='momentum in gradient descent')
-parser.add_argument('--l1-reg', nargs=1, type=float, default=0.,
+parser.add_argument('--l1-reg', type=float, default=0.,
 					help='L1 regularization')
-parser.add_argument('--l2-reg', nargs=1, type=float, default=0.,
+parser.add_argument('--l2-reg', type=float, default=0.,
 					help='L2 regularization')
-parser.add_argument('train-in', nargs=1, type=str, metavar='train-filename',
+parser.add_argument('train_in', type=str, metavar='train-in',
 					help='training data file name')
-parser.add_argument('dev-in', nargs=1, type=str, metavar='dev-filename',
+parser.add_argument('dev_in', type=str, metavar='dev-in',
 					help='development data file name')
-parser.add_argument('test-in', nargs=1, type=str, metavar='test-filename',
+parser.add_argument('test_in', type=str, metavar='test-in',
 					help='testing data file name')
-parser.add_argument('model-out', nargs=1, type=str, metavar='model-filename',
+parser.add_argument('model_out', type=str, metavar='model-out',
 					help='the output file name you want for the output model')
-parser.add_argument('prediction-out', nargs=1, type=str, metavar='pred-filename',
+parser.add_argument('prediction_out', type=str, metavar='pred-out',
 					help='the output file name you want for the output predictions')
 args = parser.parse_args()
 
@@ -67,7 +67,6 @@ L1_REG = args.l1_reg
 L2_REG = args.l2_reg
 
 start_time = time.time()
-
 
 ########################
 # Function Definitions #
@@ -86,6 +85,9 @@ def LoadData(filename, load_type):
             return shared_x, test_id
 
 def Update(params, gradients, velocities):
+    global MOMENTUM
+    global LEARNING_RATE
+    global LEARNING_RATE_DECAY
     param_updates = [ (v, v * MOMENTUM - LEARNING_RATE * g) for g, v in zip(gradients, velocities) ]
     for i in range(0, len(gradients)):
         velocities[i] = velocities[i] * MOMENTUM - LEARNING_RATE * gradients[i]
@@ -115,7 +117,7 @@ print("Loading test data...")
 test_x, test_id = LoadData(args.test_in,'test')
 print("Current time: %f" % (time.time()-start_time))
 
-print("After loading: %f" % (time.time()-start_time), file=sys.stderr)
+print >> sys.stderr, "After loading: %f" % (time.time()-start_time)
 
 ###############
 # Build Model #
@@ -185,19 +187,19 @@ print("===============================")
 
 train_num = int(math.ceil(train_y.shape[0].eval()/BATCH_SIZE))
 val_num = int(math.ceil(val_y.shape[0].eval()/BATCH_SIZE))
-print("Input dimension: %i" % INPUT_DIM, file=sys.stderr)
-print("Output dimension: %i" % OUTPUT_DIM, file=sys.stderr)
-print("# of layers: %i" % HIDDEN_LAYERS, file=sys.stderr)
-print("# of neurons per layer: %i" % NEURONS_PER_LAYER, file=sys.stderr)
-print("Max epochs: %i" % EPOCHS, file=sys.stderr)
-print("Batch size: %i" % BATCH_SIZE, file=sys.stderr)
-print("Learning rate: %f" % LEARNING_RATE, file=sys.stderr)
-print("Learning rate decay: %f" % LEARNING_RATE_DECAY, file=sys.stderr)
-print("Momentum: %f" % MOMENTUM, file=sys.stderr)
-print("L1 regularization: %f" % L1_REG, file=sys.stderr)
-print("L2 regularization: %f" % L2_REG, file=sys.stderr)
-print("iters per epoch: %i" % train_num, file=sys.stderr)
-print("validation size: %i" % val_y.shape[0].eval(), file=sys.stderr)
+print >> sys.stderr, "Input dimension: %i" % INPUT_DIM
+print >> sys.stderr, "Output dimension: %i" % OUTPUT_DIM
+print >> sys.stderr, "# of layers: %i" % HIDDEN_LAYERS
+print >> sys.stderr, "# of neurons per layer: %i" % NEURONS_PER_LAYER
+print >> sys.stderr, "Max epochs: %i" % EPOCHS
+print >> sys.stderr, "Batch size: %i" % BATCH_SIZE
+print >> sys.stderr, "Learning rate: %f" % LEARNING_RATE
+print >> sys.stderr, "Learning rate decay: %f" % LEARNING_RATE_DECAY
+print >> sys.stderr, "Momentum: %f" % MOMENTUM
+print >> sys.stderr, "L1 regularization: %f" % L1_REG
+print >> sys.stderr, "L2 regularization: %f" % L2_REG
+print >> sys.stderr, "iters per epoch: %i" % train_num
+print >> sys.stderr, "validation size: %i" % val_y.shape[0].eval()
 minibatch_indices = range(0, train_num)
 epoch = 0
 
@@ -237,7 +239,7 @@ while (epoch < EPOCHS) and training:
         '''
     print("cost: " + str(batch_cost))
     if math.isnan(batch_cost):
-        print("Epoch #%i: nan error!!!" % epoch, file=sys.stderr)
+        print >> sys.stderr, "Epoch #%i: nan error!!!" % epoch
         sys.exit()
     val_acc = 1 - np.mean([ dev_model(i) for i in xrange(0, val_num) ])
     dev_acc.append(val_acc)
@@ -247,7 +249,7 @@ while (epoch < EPOCHS) and training:
 #        'obtained at iteration %i') %
 #        (best_val_loss * 100., best_iter + 1))
 print("===============================")
-print(dev_acc, file=sys.stderr)
+print >> sys.stderr, dev_acc
 classifier.save_model(args.model_out)
 
 # Create Phone Map
@@ -274,5 +276,5 @@ f.close()
 
 print("===============================")
 print("Total time: " + str(time.time()-start_time))
-print("Total time: " + str(time.time()-start_time), file=sys.stderr)
+print >> sys.stderr, "Total time: %f" % (time.time()-start_time)
 print("===============================")
