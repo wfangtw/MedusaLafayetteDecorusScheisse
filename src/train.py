@@ -39,7 +39,7 @@ def Accuracy(val_x, val_y):
 print("Current time: " + str(time.time()-start_time))
 print("===============================")
 print("Loading dev data...")
-with open('../training_data/simple/dev_old.in','r') as f:
+with open('../training_data/simple/dev_old_old.in','r') as f:
     val_data_x, val_data_y = cPickle.load(f)
 val_x = np.array(val_data_x).astype(theano.config.floatX).T
 val_y = np.array(val_data_y).astype(theano.config.floatX).T
@@ -69,9 +69,15 @@ for i in range(0, 70):
         #print("iteration: " + str(iteration))
         #print("batch_idx: " + str(j))
         print("Current time: " + str(time.time()-start_time))
-        y, c = dnn.train_batch(j)
+        y, c, x, a1,a2, a3 = dnn.train_batch(j)
         print("Current time: " + str(time.time()-start_time))
-        #print(y)
+        print(x)
+        print(a1)
+        print(a2)
+        print(a3)
+        #print(a4)
+        print(y)
+
         #print("cost: " + str(c))
         if math.isnan(c):
             print("nan error!!!")

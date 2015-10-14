@@ -14,7 +14,7 @@ import cPickle
 start_time = time.time()
 print("===============================")
 print("Loading training data...")
-with open('../training_data/simple/train_old.in') as f:
+with open('../training_data/simple/train_old_old.in') as f:
     train_xy = cPickle.load(f)
 train_size = len(train_xy[0])
 
@@ -32,8 +32,6 @@ def SoftMax(vec):
 
 # utility functions
 '''
-def PreUpdate(params, velocities, probparams):
-
     x_ones = theano.shared(np.ones((n.INPUT_DIM,1)).astype(dtype=theano.config.floatX))
     a_ones = theano.shared(np.ones((n.NEURONS_PER_LAYER,1)).astype(dtype=theano.config.floatX))
 
@@ -77,28 +75,28 @@ def PreUpdate(params, velocities, probparams):
     velocities[5] = velocities[5] * (probparams[2]+(ones[1]-probparams[2])/n.MOMENTUM)
     velocities[7] = velocities[7] * (probparams[3]+(ones[1]-probparams[3])/n.MOMENTUM)
     velocities[9] = velocities[9] * (probparams[4]+(ones[1]-probparams[4])/n.MOMENTUM)
-
-    return params, velocities
-    for i in range(0, len(probparams)):
-        if i==0:
-            probpara.append(np.random.binomial(1,(1- n.DROPOUT_RATE), (n.INPUT_DIM,1)).astype(dtype=theano.config.floatX))
-        else :
-            probpara.append(np.random.binomial(1,(1- n.DROPOUT_RATE), (n.NEURONS_PER_LAYER,1)).astype(dtype=theano.config.floatX))'''
+'''
 
 
-   # param_updates.extend([ (a, b) for a, b in zip(probparams, probpara) ])'''
+#def PreUpdate(params, velocities, probparams):
 
-def Update(params, gradients, velocities):
-    #probpara = []
+def Update(params, gradients, velocities, probparams):
+    probpara = []
+    param_updates = [ (v, v* n.MOMENTUM - g * n.LEARNING_RATE) for v, g in zip(velocities, gradients) ]
 
-    #para, velo = PreUpdate(params, velocities''', probparams''')
-
-    param_updates = [ (v, v*n.MOMENTUM - u*n.LEARNING_RATE) for v, u in zip(velocities, gradients) ]
     for i in range(0, len(gradients)):
         velocities[i] = velocities[i] * n.MOMENTUM - gradients[i] * n.LEARNING_RATE
-    param_updates.extend([ (p, p+v) for p, v in zip(params, velocities) ])
+
+    for i in range(0, len(probparams)):
+        if i==0:
+            probpara.append(theano.shared(np.random.binomial(1,(1- n.DROPOUT_RATE), (n.INPUT_DIM,1)).astype(dtype=theano.config.floatX)))
+        else :
+            probpara.append(theano.shared(np.random.binomial(1,(1- n.DROPOUT_RATE), (n.NEURONS_PER_LAYER,1)).astype(dtype=theano.config.floatX)))
+
+    param_updates.extend([ (p, p+q) for p, q in zip(params, velocities) ])
+    param_updates.extend([ (a, b) for a, b in zip(probparams, probpara) ])
     n.LEARNING_RATE *= n.LEARNING_RATE_DECAY
-    print("Current time: " + str(time.time()-start_time))
+    #print("Current time: " + str(time.time()-start_time))
     return param_updates
 
 def SharedDataset(data_xy):
@@ -123,13 +121,13 @@ y_hat = y_shared[batch_index * n.BATCH_SIZE : (batch_index + 1) * n.BATCH_SIZE].
 x_test = T.matrix(dtype=theano.config.floatX)
 
 # parameters
-#x_prob = theano.shared(np.random.binomial(1, (1-n.DROPOUT_RATE), (n.INPUT_DIM,1)).astype(dtype=theano.config.floatX))
+x_prob = theano.shared(np.random.binomial(1, (1-n.DROPOUT_RATE), (n.INPUT_DIM,1)).astype(dtype=theano.config.floatX))
 
 W1 = theano.shared(np.random.randn(n.NEURONS_PER_LAYER, n.INPUT_DIM).astype(dtype=theano.config.floatX)/np.sqrt(n.INPUT_DIM))
 b1 = theano.shared(np.random.randn(n.NEURONS_PER_LAYER).astype(dtype=theano.config.floatX))
 v_W1 = theano.shared(np.zeros((n.NEURONS_PER_LAYER, n.INPUT_DIM)).astype(dtype=theano.config.floatX))
 v_b1 = theano.shared(np.zeros(n.NEURONS_PER_LAYER).astype(dtype=theano.config.floatX))
-'''
+
 a1_prob = theano.shared(np.random.binomial(1, (1-n.DROPOUT_RATE), (n.NEURONS_PER_LAYER,1)).astype(dtype=theano.config.floatX))
 W2 = theano.shared(np.random.randn(n.NEURONS_PER_LAYER, n.NEURONS_PER_LAYER).astype(dtype=theano.config.floatX)/np.sqrt(n.INPUT_DIM))
 b2 = theano.shared(np.random.randn(n.NEURONS_PER_LAYER).astype(dtype=theano.config.floatX))
@@ -148,7 +146,7 @@ b4 = theano.shared(np.random.randn(n.NEURONS_PER_LAYER).astype(dtype=theano.conf
 v_W4 = theano.shared(np.zeros((n.NEURONS_PER_LAYER, n.NEURONS_PER_LAYER)).astype(dtype=theano.config.floatX))
 v_b4 = theano.shared(np.zeros(n.NEURONS_PER_LAYER).astype(dtype=theano.config.floatX))
 a4_prob = theano.shared(np.random.binomial(1, (1-n.DROPOUT_RATE), (n.NEURONS_PER_LAYER,1)).astype(dtype=theano.config.floatX))
-'''
+
 W = theano.shared(np.random.randn(n.OUTPUT_DIM, n.NEURONS_PER_LAYER).astype(dtype=theano.config.floatX)/np.sqrt(n.INPUT_DIM))
 b = theano.shared(np.random.randn(n.OUTPUT_DIM).astype(dtype=theano.config.floatX))
 v_W = theano.shared(np.zeros((n.OUTPUT_DIM,n.NEURONS_PER_LAYER)).astype(dtype=theano.config.floatX))
@@ -156,42 +154,41 @@ v_b = theano.shared(np.zeros(n.OUTPUT_DIM).astype(dtype=theano.config.floatX))
 #########
 # model #
 #########
-#, W2, b2, W3, b3, W4, b4,
-#,v_W2, v_b2, v_W3, v_b3, v_W4, v_b4
-params = [W1,b1, W, b]
-#probparams = [x_prob, a1_prob, a2_prob, a3_prob, a4_prob]
-velocities = [v_W1, v_b1, v_W, v_b]
+
+params = [W1,b1,W2,b2,W3,b3, W, b]
+probparams = [x_prob, a1_prob, a2_prob, a3_prob, a4_prob]
+velocities = [v_W1, v_b1,v_W2, v_b2,v_W3, v_b3, v_W, v_b]
 # forward propogation
-'''
+
 # for batch
 prob_x = T.addbroadcast(x_prob,1)
 prob_a1 = T.addbroadcast(a1_prob,1)
 prob_a2 = T.addbroadcast(a2_prob,1)
 prob_a3 = T.addbroadcast(a3_prob,1)
 prob_a4 = T.addbroadcast(a4_prob,1)
-'''
-#X  = x# * prob_x
-a1 = (ReLU(T.dot(W1,x) + b1.dimshuffle(0, 'x')))# * prob_a1
-#a2 = (SoftMax(T.dot(W2,a1) + b2.dimshuffle(0, 'x')))# *  prob_a2
-#a3 = (SoftMax(T.dot(W3,a2) + b3.dimshuffle(0, 'x'))) #*  prob_a3
-#a4 = (SoftMax(T.dot(W4,a3) + b4.dimshuffle(0, 'x'))) #*  prob_a4
-y = SoftMax( T.dot(W,a1) + b.dimshuffle(0, 'x') )
+
+X  = x# * prob_x
+a1 = (ReLU(T.dot(W1,X) + b1.dimshuffle(0, 'x')))# * prob_a1
+a2 = (ReLU(T.dot(W2,a1) + b2.dimshuffle(0, 'x'))) #*  prob_a2
+a3 = (ReLU(T.dot(W3,a2) + b3.dimshuffle(0, 'x'))) #*  prob_a3
+#a4 = (ReLU(T.dot(W4,a3) + b4.dimshuffle(0, 'x'))) *  prob_a4
+y =  SoftMax( T.dot(W,a3) + b.dimshuffle(0, 'x') )
 
 # for test
-a1_t = ReLU(T.dot(W1,x_test) + b1.dimshuffle(0, 'x'))
-#a2_t = SoftMax(T.dot(W2,a1_t) + b2.dimshuffle(0, 'x'))
-#a3_t = SoftMax(T.dot(W3,a2_t) + b3.dimshuffle(0, 'x'))
-#a4_t = SoftMax(T.dot(W4,a3_t) + b4.dimshuffle(0, 'x'))
-y_t = SoftMax( T.dot(W,a1_t) + b.dimshuffle(0, 'x') )
+a1_t = ReLU(T.dot(n.DROPOUT_RATE*W1,x_test) + n.DROPOUT_RATE*b1.dimshuffle(0, 'x'))
+a2_t = ReLU(T.dot(n.DROPOUT_RATE*W2,a1_t) + n.DROPOUT_RATE*b2.dimshuffle(0, 'x'))
+a3_t = ReLU(T.dot(n.DROPOUT_RATE*W3,a2_t) + n.DROPOUT_RATE*b3.dimshuffle(0, 'x'))
+#a4_t = ReLU(T.dot(n.DROPOUT_RATE*W4,a3_t) + n.DROPOUT_RATE*b4.dimshuffle(0, 'x'))
+y_t = SoftMax( T.dot(n.DROPOUT_RATE*W,a3_t) + n.DROPOUT_RATE*b.dimshuffle(0, 'x') )
 
 # cost function
 cost = -T.log(T.dot(y.T, y_hat)).trace()/n.BATCH_SIZE
 
 # calculate gradient
- #dW2, db2, dW3, db3, dW4, db4,
-#dW2, db2, dW3, db3, dW4, db4,
-dW1, db1, dW, db = T.grad(cost, params)
-dparams = [dW1, db1, dW, db]
+
+
+dW1, db1, dW2, db2, dW3, db3, dW, db = T.grad(cost, params)
+dparams = [dW1, db1, dW2, db2, dW3, db3, dW, db]
 
 #dW1, db1, dW2, db2, dW3, db3, dW, db = T.grad(cost, [W1, b1, W2, b2, W3, b3, W, b])
 #dparams = [dW1, db1, dW2, db2, dW3, db3, dW, db]
@@ -206,8 +203,8 @@ prediction = y_t.argmax(axis=0)
 # train batch
 train_batch = theano.function(
         inputs=[batch_index],
-        outputs=[y, cost],
-	updates=Update(params, dparams, velocities)
+        outputs=[y, cost, x, a1,a2,a3],
+	updates=Update(params, dparams, velocities, probparams)
         )
 
 # test
