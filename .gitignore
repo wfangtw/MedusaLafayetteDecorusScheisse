@@ -13,3 +13,5 @@ debug*
 models
 *.in
 predictions
+log
+*.log
