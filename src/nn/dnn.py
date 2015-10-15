@@ -27,8 +27,10 @@ class HiddenLayer:
         self.b = b
         self.v_W = v_W
         self.v_b = v_b
+        self.prob = theano.shared(np.random.binomial(1,(1-d_rate),n_in).astype(dtype=theano.config.floatX))
 
-        lin_output = a.relu(T.dot(self.W, input) + self.b.dimshuffle(0, 'x'))
+        input = input * self.prob.dimshuffle(0, 'x')
+        lin_output = a.relu(T.dot(self.W, input ) + self.b.dimshuffle(0, 'x'))
         self.output = (
                 lin_output if activation is None
                 else activation(lin_output)
@@ -40,6 +42,7 @@ class MLP:
     def __init__(self, input, n_in, n_hidden, n_out, n_layers, drop_out):
         # hidden layers
         self.params = []
+        self.probparams = []
         self.hiddenLayers = []
         self.velo = []
         self.hiddenLayers.append(
@@ -49,22 +52,25 @@ class MLP:
                     n_out=n_hidden,
 					d_rate=drop_out
                     activation=a.relu
-					
+
                 )
         )
         self.params.extend(self.hiddenLayers[0].params)
         self.velo.extend(self.hiddenLayers[0].velo)
+        self.probparams.extend(self.hiddenLayers[0].prob)
         for i in range(1, n_layers):
             self.hiddenLayers.append(
                 HiddenLayer(
                     input=self.hiddenLayers[i-1].output,
                     n_in=n_hidden,
                     n_out=n_hidden,
+                    d_rate=drop_out
                     activation=a.relu
                 )
             )
             self.params.extend(self.hiddenLayers[i].params)
             self.velo.extend(self.hiddenLayers[i].velo)
+            self.probparams.extend(self.hiddenLayers[i].prob)
         # output layer
         self.logRegressionLayer = LogisticRegression(
                 input=self.hiddenLayers[n_layers-1].output,

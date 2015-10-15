@@ -37,7 +37,7 @@ parser.add_argument('--learning-rate', type=float, default=0.0001,
 parser.add_argument('--learning-rate-decay', type=float, default=1.,
 					help='learning rate decay')
 parser.add_argument('--drop-out-rate', type=float, default=0, metavar='d-rate',
-					help='dropout: letting some neurons to be exactly fucked up.')
+					help='dropout: letting some portion (dropout rate)of neurpns to be totally fucked up.')
 parser.add_argument('--momentum', type=float, default=0.,
 					help='momentum in gradient descent')
 parser.add_argument('--l1-reg', type=float, default=0.,
@@ -83,19 +83,25 @@ def LoadData(filename, load_type):
             data_x, data_y = cPickle.load(f)
             shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX))
             shared_y = theano.shared(np.asarray(data_y, dtype='int32'))
-            return shared_x, shared_y
+            return shared_x, shared_yi
         else:
             data_x, test_id = cPickle.load(f)
             shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX))
             return shared_x, test_id
 
-def Update(params, gradients, velocities):
+def Update(params, gradients, velocities, probparams):
     global MOMENTUM
     global LEARNING_RATE
     global LEARNING_RATE_DECAY
+    global DROP_RATE
     param_updates = [ (v, v * MOMENTUM - LEARNING_RATE * g) for g, v in zip(gradients, velocities) ]
     for i in range(0, len(gradients)):
         velocities[i] = velocities[i] * MOMENTUM - LEARNING_RATE * gradients[i]
+
+    probpara = []
+    for i in range(0, len(probparams)):
+        probpara.extend(theano.shared(np.random.binomial(1,(1-DROP_RATE),)))
+
     param_updates.extend([ (p, p + v) for p, v in zip(params, velocities) ])
     LEARNING_RATE *= LEARNING_RATE_DECAY
     return param_updates
@@ -140,7 +146,7 @@ classifier = MLP(
         n_hidden=NEURONS_PER_LAYER,
         n_out=OUTPUT_DIM,
         n_layers=HIDDEN_LAYERS
-		drop_out=DROPOUT_RATE
+	drop_out=DROPOUT_RATE
 )
 
 # cost + regularization terms; cost is symbolic
@@ -176,7 +182,7 @@ dparams = [ T.grad(cost, param) for param in classifier.params ]
 train_model = theano.function(
         inputs=[index],
         outputs=cost,
-        updates=Update(classifier.params, dparams, classifier.velo),
+        updates=Update(classifier.params, dparams, classifier.velo, classifier.probparams),
         givens={
             x: train_x[ index * BATCH_SIZE : (index + 1) * BATCH_SIZE ].T,
             y: train_y[ index * BATCH_SIZE : (index + 1) * BATCH_SIZE ].T,
