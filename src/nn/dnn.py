@@ -96,8 +96,8 @@ class MLP:
         for layer in self.hiddenLayers:
             cPickle.dump(layer.W.get_value(borrow=True), save_file, -1)
             cPickle.dump(layer.b.get_value(borrow=True), save_file, -1)
-		cPickle.dump(self.logRegressionLayer.W.get_value(borrow=True), save_file, -1)
-		cPickle.dump(self.logRegressionLayer.b.get_value(borrow=True), save_file, -1)
+        cPickle.dump(self.logRegressionLayer.W.get_value(borrow=True), save_file, -1)
+        cPickle.dump(self.logRegressionLayer.b.get_value(borrow=True), save_file, -1)
         save_file.close()
     # load_model
     def load_model(self, filename):
@@ -105,5 +105,5 @@ class MLP:
         for layer in self.hiddenLayers:
             layer.W.set_value(cPickle.load(save_file), borrow=True)
             layer.b.set_value(cPickle.load(save_file), borrow=True)
-		self.logRegressionLayer.W.set_value(cPickle.load(save_file), borrow=True)
-		self.logRegressionLayer.b.set_value(cPickle.load(save_file), borrow=True)
+        self.logRegressionLayer.W.set_value(cPickle.load(save_file), borrow=True)
+        self.logRegressionLayer.b.set_value(cPickle.load(save_file), borrow=True)
