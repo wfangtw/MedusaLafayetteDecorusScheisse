@@ -20,25 +20,25 @@ import theano.tensor as T
 from nn.dnn import MLP
 
 parser = argparse.ArgumentParser(prog='train.py', description='Train DNN for Phone Classification.')
-parser.add_argument('--input-dim', type=int, required=True, metavar='nIn',
+parser.add_argument('--input-dim', type=int, required=True, metavar='<n-in>',
 					help='input dimension of network')
-parser.add_argument('--output-dim', type=int, required=True, metavar='nOut',
+parser.add_argument('--output-dim', type=int, required=True, metavar='<n-out>',
 					help='output dimension of network')
-parser.add_argument('--hidden-layers', type=int, required=True, metavar='nLayers',
+parser.add_argument('--hidden-layers', type=int, required=True, metavar='<n-layers>',
 					help='number of hidden layers')
-parser.add_argument('--neurons-per-layer', type=int, required=True, metavar='nNeurons',
+parser.add_argument('--neurons-per-layer', type=int, required=True, metavar='<n-neurons>',
 					help='number of neurons in a hidden layer')
-parser.add_argument('--max-epochs', type=int, required=True, metavar='nEpochs',
+parser.add_argument('--max-epochs', type=int, required=True, metavar='<n-epochs>',
 					help='number of maximum epochs')
-parser.add_argument('--batch-size', type=int, default=1,
+parser.add_argument('--batch-size', type=int, default=1, metavar='<b-size>',
 					help='size of minibatch')
-parser.add_argument('--learning-rate', type=float, default=0.0001,
+parser.add_argument('--learning-rate', type=float, default=0.0001, metavar='<l-rate>',
 					help='learning rate of gradient descent')
-parser.add_argument('--learning-rate-decay', type=float, default=1.,
+parser.add_argument('--learning-rate-decay', type=float, default=1., metavar='<l-decay>',
 					help='learning rate decay')
-parser.add_argument('--dropout', type=float, default=0, metavar='d-rate',
+parser.add_argument('--dropout', type=float, default=0, metavar='<dropout>',
 					help='dropout: letting some portion (dropout rate)of neurpns to be totally fucked up.')
-parser.add_argument('--momentum', type=float, default=0.,
+parser.add_argument('--momentum', type=float, default=0., metavar='<momentum>',
 					help='momentum in gradient descent')
 parser.add_argument('--l1-reg', type=float, default=0.,
 					help='L1 regularization')
