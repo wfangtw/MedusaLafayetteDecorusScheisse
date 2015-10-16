@@ -83,7 +83,7 @@ def LoadData(filename, load_type):
             data_x, data_y = cPickle.load(f)
             shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX))
             shared_y = theano.shared(np.asarray(data_y, dtype='int32'))
-            return shared_x, shared_yi
+            return shared_x, shared_y
         else:
             data_x, test_id = cPickle.load(f)
             shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX))
@@ -93,15 +93,30 @@ def Update(params, gradients, velocities, probparams):
     global MOMENTUM
     global LEARNING_RATE
     global LEARNING_RATE_DECAY
-    global DROP_RATE
+    global DROPOUT_RATE
+    global INPUT_DIM
+    global NEURONS_PER_LAYER
+
+    x_ones = theano.shared(np.ones(INPUT_DIM).astype(dtype=theano.config.floatX))
+    a_ones = theano.shared(np.ones(NEURONS_PER_LAYER).astype(dtype=theano.config.floatX))
+    para = []
+    velo = []
+
+    for i in range(0, len(probparams)):
+        if i == 0:
+            velo.append(velocities[0] * (probparams[0] + (x_ones - probparams[0])/MOMENTUM).dimshuffle('x' , 0))
+            velo.append(velocities[1] * (probparams[0] + (x_ones - probparams[0])/MOMENTUM).dimshuffle(0 , 'x'))
+            para.append(params[0] - velo[0])
+            para.append(params[1] - velo[1])
+        else :
+            velo.append(velocities[i*2] * (probparams[i] + (a_ones - probparams[i])/MOMENTUM).dimshuffle('x' , 0))
+            velo.append(velocities[i*2+1] * (probparams[i] + (a_ones - probparams[i])/MOMENTUM).dimshuffle(0 , 'x'))
+            para.append(params[i*2] - velo[i*2])
+            para.append(params[i*2+1] - velo[i*2+1])
+
     param_updates = [ (v, v * MOMENTUM - LEARNING_RATE * g) for g, v in zip(gradients, velocities) ]
     for i in range(0, len(gradients)):
         velocities[i] = velocities[i] * MOMENTUM - LEARNING_RATE * gradients[i]
-
-    probpara = []
-    for i in range(0, len(probparams)):
-        probpara.extend(theano.shared(np.random.binomial(1,(1-DROP_RATE),)))
-
     param_updates.extend([ (p, p + v) for p, v in zip(params, velocities) ])
     LEARNING_RATE *= LEARNING_RATE_DECAY
     return param_updates
@@ -134,6 +149,8 @@ print >> sys.stderr, "After loading: %f" % (time.time()-start_time)
 # Build Model #
 ###############
 
+#rng = np.random.RandomState(12345)
+
 # symbolic variables
 index = T.lscalar()
 x = T.matrix(dtype=theano.config.floatX)
@@ -145,7 +162,7 @@ classifier = MLP(
         n_in=INPUT_DIM,
         n_hidden=NEURONS_PER_LAYER,
         n_out=OUTPUT_DIM,
-        n_layers=HIDDEN_LAYERS
+        n_layers=HIDDEN_LAYERS,
 	drop_out=DROPOUT_RATE
 )
 
@@ -234,6 +251,7 @@ while (epoch < EPOCHS) and training:
     random.shuffle(minibatch_indices)
     for minibatch_index in minibatch_indices:
         batch_cost = train_model(minibatch_index)
+        classifier.randomize_dropout(DROPOUT_RATE)
         iteration = (epoch - 1) * train_num + minibatch_index
         '''
         if (iteration + 1) % val_freq == 0:
@@ -263,6 +281,9 @@ while (epoch < EPOCHS) and training:
 print("===============================")
 print >> sys.stderr, dev_acc
 classifier.save_model(args.model_out)
+
+#Final correction due to dropout
+classifier.reset_dropout(DROPOUT_RATE)
 
 # Create Phone Map
 f = open('data/phones/48_39.map','r')

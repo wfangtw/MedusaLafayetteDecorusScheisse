@@ -13,7 +13,7 @@ import activation as a
 import cPickle
 
 class HiddenLayer:
-    def __init__(self, input, n_in, n_out, W=None, b=None, v_W=None, v_b=None, d_rate, activation=a.relu):
+    def __init__(self, input, n_in, n_out, W=None, b=None, v_W=None, v_b=None, d_rate=0., activation=a.relu):
         self.input = input
         if W is None:
             W = theano.shared(np.random.randn(n_out, n_in).astype(dtype=theano.config.floatX)/np.sqrt(n_in))
@@ -50,27 +50,26 @@ class MLP:
                     input=input,
                     n_in=n_in,
                     n_out=n_hidden,
-					d_rate=drop_out
+                    d_rate=drop_out,
                     activation=a.relu
-
                 )
         )
         self.params.extend(self.hiddenLayers[0].params)
         self.velo.extend(self.hiddenLayers[0].velo)
-        self.probparams.extend(self.hiddenLayers[0].prob)
+        self.probparams.append(self.hiddenLayers[0].prob)
         for i in range(1, n_layers):
             self.hiddenLayers.append(
                 HiddenLayer(
                     input=self.hiddenLayers[i-1].output,
                     n_in=n_hidden,
                     n_out=n_hidden,
-                    d_rate=drop_out
+                    d_rate=drop_out,
                     activation=a.relu
                 )
             )
             self.params.extend(self.hiddenLayers[i].params)
             self.velo.extend(self.hiddenLayers[i].velo)
-            self.probparams.extend(self.hiddenLayers[i].prob)
+            self.probparams.append(self.hiddenLayers[i].prob)
         # output layer
         self.logRegressionLayer = LogisticRegression(
                 input=self.hiddenLayers[n_layers-1].output,
@@ -97,6 +96,16 @@ class MLP:
         self.errors = self.logRegressionLayer.errors
         # predict
         self.y_pred = self.logRegressionLayer.y_pred
+
+    def randomize_dropout(self, rate):
+        for i in range(0,len(self.probparams)):
+            self.probparams[i].set_value(np.random.binomial(1, (1-rate), self.probparams[i].shape[0].eval()).astype(dtype = theano.config.floatX))
+
+    def reset_dropout(self, old_d_rate):
+        for prob in self.probparams:
+            prob = T.zeros_like(prob)
+        for param in self.params:
+            param = param *  old_d_rate
 
     # save_model
     def save_model(self, filename):

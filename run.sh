@@ -21,13 +21,14 @@ log_dir=log
 
 n_in=39
 n_out=48
-n_layers=1
-n_neurons=128
-epochs=250
+n_layers=2
+n_neurons=1024
+epochs=200
 batch_size=128
 learning_rate=0.0001
 decay=0.9999
 momentum=0.9
+drop_out_rate=0.5
 
 python2 -u $src_dir/train.py --input-dim $n_in --output-dim $n_out \
 	--hidden-layers $n_layers --neurons-per-layer $n_neurons \
