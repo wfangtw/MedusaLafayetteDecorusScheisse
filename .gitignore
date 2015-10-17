@@ -5,6 +5,8 @@ __pycache__
 *.swo
 *.orig
 test*
+!test.py
+!test.sh
 *.tgz
 data
 training_data
