@@ -21,7 +21,7 @@ log_dir=log
 
 n_in=39
 n_out=48
-n_layers=4
+n_layers=2
 n_neurons=1024
 epochs=200
 batch_size=128
