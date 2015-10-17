@@ -103,9 +103,9 @@ class MLP:
 
     def reset_dropout(self, old_d_rate):
         for prob in self.probparams:
-            prob = T.zeros_like(prob)
+            prob.set_value(np.ones(prob.shape[0].eval()).astype(dtype = theano.config.floatX))
         for param in self.params:
-            param = param *  old_d_rate
+            param.set_value(param.get_value() *  (1 - old_d_rate))
 
     # save_model
     def save_model(self, filename):
