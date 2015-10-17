@@ -19,13 +19,13 @@ pred_dir=predictions
 model_dir=models
 log_dir=log
 
-n_in=351
+n_in=195
 n_out=1943
 n_layers=3
 n_neurons=1024
 epochs=200
 batch_size=256
-learning_rate=0.001
+learning_rate=0.0005
 decay=0.9999
 momentum=0.5
 l2_reg=0.0001
