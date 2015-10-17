@@ -1,13 +1,6 @@
 #!/bin/bash
 
-#if [ -f setup.sh ]; then
-#	. setup.sh;
-#else
-#	echo "ERROR: setup.sh is missing!";
-#	exit 1;
-#fi
-
-if [ $# -eq 0 ]; then
+if [ $# -ne 2 ]; then
     echo "Usage: run.sh <training-data-subdirectory> <output name(without suffix)>"
 	echo "ex: run.sh simple myoutput"
 	exit 1;
