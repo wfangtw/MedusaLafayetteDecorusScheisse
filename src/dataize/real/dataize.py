@@ -2,6 +2,8 @@
 import numpy as np
 import cPickle
 import random
+import theano
+import theano.tensor as T
 
 train_ip = []   # [ [351 dim], [353 dim], ... ]
 train_op = []   # [ [1943 dim], [1943 dim], ... ]
@@ -102,13 +104,10 @@ for flabel in label_dim:
         dim_351 = map(float, dim_351)
         if flabel.split('_')[0] in label_dev:
             dev_ip.append(dim_351)
-            dev_op.append(int(label[flabel][x])-1)
+            dev_op.append(int(label[flabel][x]))
         else:
-
             train_ip.append(dim_351)
-            train_op.append(int(label[flabel][x])-1)
-
-
+            train_op.append(int(label[flabel][x]))
 
 # normalize train_ip
 print "normalize train_ip"
@@ -130,6 +129,8 @@ dev_ip = (dev_ip - dev_mean) / dev_std
 print "write to file"
 train = (train_ip.tolist(), train_op)
 dev = (dev_ip.tolist(), dev_op)
+#train = (train_ip, train_op)
+#dev = (dev_ip, dev_op)
 
 with open("../../../training_data/real/train.in", "w") as f_train:
     #f_train.write(str(train))
@@ -137,3 +138,19 @@ with open("../../../training_data/real/train.in", "w") as f_train:
 with open("../../../training_data/real/dev.in", "w") as f_dev:
     #f_dev.write(str(dev))
     cPickle.dump(dev, f_dev)
+
+print "write to file theano"
+# write theano variable to file
+train_Tdata_ip = np.array(train_ip.tolist()).astype(theano.config.floatX).T
+train_Tdata_op = np.array(train_op).astype(theano.config.floatX).T
+dev_Tdata_ip = np.array(dev_ip.tolist()).astype(theano.config.floatX).T
+dev_Tdata_op = np.array(dev_op).astype(theano.config.floatX).T
+train_Tdata = (train_Tdata_ip, train_Tdata_op)
+dev_Tdata = (dev_Tdata_ipm, dev_Tdata_op)
+
+with open("../../../training_data/real/train_theano.in", "w") as f_train:
+    #f_train.write(str(train_Tdata))
+    cPickle.dump(train_Tdata, f_train)
+with open("../../../training_data/real/dev_theano.in", "w") as f_dev:
+    #f_dev.write(str(dev_Tdata))
+    cPickle.dump(dev_Tdata, f_dev)

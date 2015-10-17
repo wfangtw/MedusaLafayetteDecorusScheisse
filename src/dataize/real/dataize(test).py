@@ -4,7 +4,7 @@ import cPickle
 import random
 import sys
 
-test_ip = []    # [ [39 dim], [39 dim], ... ]
+test_ip = []    # [ [351 dim], [351 dim], ... ]
 test_op = []    # [ instant_ID, instant_ID, ... ]
 
 label_dim = {}  # label frame
@@ -71,7 +71,6 @@ for flabel in label_dim:
         test_ip.append(dim_351)
         test_op.append(flabel+'_'+str(x+1))
 
-
 # normalize test_ip
 test_ip = np.array(test_ip).astype(dtype=np.float64)
 mean = np.mean(test_ip, axis=0, dtype=np.float64, keepdims=True)
@@ -79,7 +78,9 @@ std = np.std(test_ip, axis=0, dtype=np.float64, ddof=1, keepdims=True)
 test_ip = (test_ip - mean) / std
 
 # write to file
-test = (test_ip.tolist(), test_op)
+ test = (test_ip.tolist(), test_op)
+#test = (test_ip, test_op)
 
 with open("../../../training_data/real/test.in", "w") as f_test:
+    #f_test.write(str(test))
     cPickle.dump(test, f_test)
