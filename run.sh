@@ -21,9 +21,9 @@ log_dir=log
 
 n_in=195
 n_out=1943
-n_layers=3
+n_layers=4
 n_neurons=1024
-epochs=200
+epochs=300
 batch_size=256
 learning_rate=0.0005
 decay=0.9999
