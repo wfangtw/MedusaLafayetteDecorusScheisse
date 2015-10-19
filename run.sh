@@ -7,7 +7,7 @@
 #	exit 1;
 #fi
 
-if [ $# -eq 0 ]; then
+if [ $# -ne 2 ]; then
     echo "Usage: run.sh <training-data-subdirectory> <output name(without suffix)>"
 	echo "ex: run.sh simple myoutput"
 	exit 1;
@@ -25,9 +25,9 @@ n_layers=4
 n_neurons=1024
 epochs=300
 batch_size=256
-learning_rate=0.0005
-decay=0.9999
-momentum=0.5
+learning_rate=0.005
+decay=1.0
+momentum=0.0
 l2_reg=0.0001
 
 python2 -u $src_dir/train.py --input-dim $n_in --output-dim $n_out \

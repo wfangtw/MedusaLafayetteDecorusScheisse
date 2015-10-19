@@ -65,6 +65,7 @@ LEARNING_RATE_DECAY = args.learning_rate_decay
 MOMENTUM = args.momentum
 L1_REG = args.l1_reg
 L2_REG = args.l2_reg
+SQUARE_GRADIENTS = 0
 
 start_time = time.time()
 
@@ -95,7 +96,8 @@ def LoadData(filename, load_type):
             shared_y = theano.shared(np.asarray(data_y, dtype='int32'), borrow=True)
             return shared_x, shared_y
         '''
-
+'''
+#momentum
 def Update(params, gradients, velocities):
     global MOMENTUM
     global LEARNING_RATE
@@ -106,6 +108,18 @@ def Update(params, gradients, velocities):
     param_updates.extend([ (p, p + v) for p, v in zip(params, velocities) ])
     LEARNING_RATE *= LEARNING_RATE_DECAY
     return param_updates
+'''
+
+#adagrad
+def Update(params, gradients, square_gra):
+    global LEARNING_RATE
+    param_updates = [ (s, s + g*g) for g, s in zip(gradients, square_gra) ]
+    for i in range(0, len(gradients)):
+        square_gra[i] = square_gra[i] + gradients[i] * gradients[i]
+    param_updates.extend([ (p, p - LEARNING_RATE * g /T.sqrt(s) ) for p, s, g in zip(params, square_gra, gradients) ])
+    return param_updates
+
+
 
 ##################
 #   Load Data    #
@@ -253,7 +267,11 @@ while (epoch < EPOCHS) and training:
     elif epoch == 100:
         classifier.save_model("models/100_temp.mdl")
     elif epoch == 150:
+        classifier.save_model("models/150_temp.mdl")
+    elif epoch == 200:
         classifier.save_model("models/200_temp.mdl")
+    elif epoch == 250:
+        classifier.save_model("models/250_temp.mdl")
 #print(('Optimization complete. Best validation score of %f %% '
 #        'obtained at iteration %i') %
 #        (best_val_loss * 100., best_iter + 1))
