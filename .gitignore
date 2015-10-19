@@ -15,6 +15,7 @@ debug*
 models
 *.in
 !4_layer_intermediate*
+!4_layer_adagrad_50*
 predictions
 log
 *.log
