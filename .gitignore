@@ -14,6 +14,7 @@ smallset*
 debug*
 models
 *.in
+!predictions/4_layer_intermediate.csv
 predictions
 log
 *.log
