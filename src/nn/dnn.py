@@ -89,6 +89,7 @@ class MLP:
         self.errors = self.logRegressionLayer.errors
         # predict
         self.y_pred = self.logRegressionLayer.y_pred
+        self.output = self.logRegressionLayer.y.T
 
     # save_model
     def save_model(self, filename):

@@ -12,7 +12,7 @@ pred_dir=predictions
 model_dir=models
 log_dir=log
 
-n_in=195
+n_in=351
 n_out=1943
 n_layers=4
 n_neurons=1024
