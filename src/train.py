@@ -46,12 +46,8 @@ parser.add_argument('train_in', type=str, metavar='train-in',
 					help='training data file name')
 parser.add_argument('dev_in', type=str, metavar='dev-in',
 					help='development data file name')
-parser.add_argument('test_in', type=str, metavar='test-in',
-					help='testing data file name')
 parser.add_argument('model_out', type=str, metavar='model-out',
 					help='the output file name you want for the output model')
-parser.add_argument('prediction_out', type=str, metavar='pred-out',
-					help='the output file name you want for the output predictions')
 args = parser.parse_args()
 
 INPUT_DIM = args.input_dim
@@ -137,8 +133,6 @@ print("Loading training data...")
 train_x, train_y = LoadData(args.train_in,'train')
 print("Current time: %f" % (time.time()-start_time))
 
-#print >> sys.stderr, type(train_x)
-#print >> sys.stderr, train_x.shape
 print >> sys.stderr, "After loading: %f" % (time.time()-start_time)
 
 ###############
@@ -262,63 +256,22 @@ while (epoch < EPOCHS) and training:
     dev_acc.append(val_acc)
     print("dev accuracy: " + str(dev_acc[-1]))
     print("Current time: " + str(time.time()-start_time))
-    if epoch == 50:
+    if epoch == 20:
+        classifier.save_model("models/20_temp.mdl")
+    elif epoch == 40:
+        classifier.save_model("models/40_temp.mdl")
+    elif epoch == 50:
         classifier.save_model("models/50_temp.mdl")
-    elif epoch == 100:
-        classifier.save_model("models/100_temp.mdl")
-    elif epoch == 150:
-        classifier.save_model("models/150_temp.mdl")
-    elif epoch == 200:
-        classifier.save_model("models/200_temp.mdl")
-    elif epoch == 250:
-        classifier.save_model("models/250_temp.mdl")
+    elif epoch == 60:
+        classifier.save_model("models/60_temp.mdl")
+    elif epoch == 80:
+        classifier.save_model("models/80_temp.mdl")
 #print(('Optimization complete. Best validation score of %f %% '
 #        'obtained at iteration %i') %
 #        (best_val_loss * 100., best_iter + 1))
 print("===============================")
 print >> sys.stderr, dev_acc
 classifier.save_model(args.model_out)
-train_x.set_value([[]])
-train_y.set_value([])
-val_x.set_value([[]])
-val_y.set_value([])
-
-# Load Test data
-print("===============================")
-print("Loading test data...")
-test_x, test_id = LoadData(args.test_in,'test')
-print("Current time: %f" % (time.time()-start_time))
-
-# compile "test model" function
-test_model = theano.function(
-        inputs=[],
-        outputs=classifier.y_pred,
-        givens={
-            x: test_x.T
-        }
-)
-
-# Create Phone Map
-f = open('data/phones/state_48_39.map','r')
-phone_map = {}
-i = 0
-for l in f:
-    phone_map[i] = l.strip(' \n').split('\t')[2]
-    i += 1
-f.close()
-
-# Testing
-print("===============================")
-print("Start Testing")
-y = np.asarray(test_model()).tolist()
-print("Current time: " + str(time.time()-start_time))
-
-# Write prediction
-f = open(args.prediction_out,'w')
-f.write('Id,Prediction\n')
-for i in range(0, len(y)):
-    f.write(test_id[i] + ',' + phone_map[y[i]] + '\n')
-f.close()
 
 print("===============================")
 print("Total time: " + str(time.time()-start_time))
