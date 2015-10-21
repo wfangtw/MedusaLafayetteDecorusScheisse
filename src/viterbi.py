@@ -48,7 +48,7 @@ print("===============================")
 print("Loading test data...")
 test_x, test_id = LoadData(args.test_in,'test')
 
-with open(hmm_model_in, 'r') as f:
+with open(args.hmm_model_in, 'r') as f:
     amount = cPickle.load(f)
     trans = cPickle.load(f)
 
@@ -109,18 +109,22 @@ print("MLP feedforward...")
 y = np.asarray(test_model())
 print("Current time: %f" % (time.time()-start_time))
 
-# Viterbi decoding
-print("Viterbi decoding...")
-current_idx
-
-print("Current time: %f" % (time.time()-start_time))
-
-# Write prediction
 f = open(args.prediction_out,'w')
 f.write('Id,Prediction\n')
-for i in range(0, len(y)):
-    f.write(test_id[i] + ',' + phone_map[y[i]] + '\n')
+
+# Viterbi decoding
+print("Viterbi decoding...")
+current_idx = 0
+while current_idx < len(test_id):
+    s_id = test_id[current_idx].rsplit('_',1)[0]
+    sentence_len = amount[current_idx]
+    pred = ViterbiDecode(y[current_idx : (current_idx + sentence_len)], sentence_len)
+    # Write prediction
+    for i in range(0, len(pred)):
+        f.write(test_id[current_idx+i] + ',' + phone_map[pred[i]] + '\n')
+    current_idx += sentence_len
 f.close()
+
 
 print("===============================")
 print("Total time: " + str(time.time()-start_time))
