@@ -1,5 +1,7 @@
-fr = open("../predictions/4_layer_351_adagrad_50epoch_test.csv", "r")
-fw = open("../predictions/4_layer_351_adagrad_50epoch_smooth.csv", "w")
+import sys
+
+fr = open(sys.argv[1], "r")
+fw = open(sys.argv[2], "w")
 
 pline = ""
 fw.write(fr.readline())        # pop out first line (Id,Prediction)
