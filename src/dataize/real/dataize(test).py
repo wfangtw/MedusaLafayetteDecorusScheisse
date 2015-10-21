@@ -3,7 +3,7 @@ import numpy as np
 import random
 import sys
 
-test_ip = []    # [ [279 dim], [279 dim], ... ]
+test_ip = []    # [ [351 dim], [351 dim], ... ]
 test_op = []    # [ instant_ID, instant_ID, ... ]
 
 ## statistic of male and female
