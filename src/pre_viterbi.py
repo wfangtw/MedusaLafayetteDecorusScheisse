@@ -18,7 +18,8 @@ for line in f:
 f.close()
 
 # smoothen
-# transition = transition + np.ones(1943)
+# smooth = np.ones(1943) * 0.01
+# transition = transition + smooth
 # transition = transition + np.ones(6)
 
 # convert to prob.
