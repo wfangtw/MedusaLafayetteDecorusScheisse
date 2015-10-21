@@ -20,22 +20,24 @@ import theano.tensor as T
 from nn.dnn import MLP
 
 parser = argparse.ArgumentParser(prog='train.py', description='Train DNN for Phone Classification.')
-parser.add_argument('--input-dim', type=int, required=True, metavar='<nIn>',
+parser.add_argument('--input-dim', type=int, required=True, metavar='<n-in>',
 					help='input dimension of network')
-parser.add_argument('--output-dim', type=int, required=True, metavar='<nOut>',
+parser.add_argument('--output-dim', type=int, required=True, metavar='<n-out>',
 					help='output dimension of network')
-parser.add_argument('--hidden-layers', type=int, required=True, metavar='<nLayers>',
+parser.add_argument('--hidden-layers', type=int, required=True, metavar='<n-layers>',
 					help='number of hidden layers')
-parser.add_argument('--neurons-per-layer', type=int, required=True, metavar='<nNeurons>',
+parser.add_argument('--neurons-per-layer', type=int, required=True, metavar='<n-neurons>',
 					help='number of neurons in a hidden layer')
-parser.add_argument('--max-epochs', type=int, required=True, metavar='<nEpochs>',
+parser.add_argument('--max-epochs', type=int, required=True, metavar='<n-epochs>',
 					help='number of maximum epochs')
-parser.add_argument('--batch-size', type=int, default=1, metavar='<size>',
+parser.add_argument('--batch-size', type=int, default=1, metavar='<b-size>',
 					help='size of minibatch')
-parser.add_argument('--learning-rate', type=float, default=0.0001, metavar='<rate>',
+parser.add_argument('--learning-rate', type=float, default=0.0001, metavar='<l-rate>',
 					help='learning rate of gradient descent')
-parser.add_argument('--learning-rate-decay', type=float, default=1., metavar='<decay>',
+parser.add_argument('--learning-rate-decay', type=float, default=1., metavar='<l-decay>',
 					help='learning rate decay')
+parser.add_argument('--dropout', type=float, default=0, metavar='<dropout>',
+					help='dropout: letting some portion (dropout rate)of neurpns to be totally fucked up.')
 parser.add_argument('--momentum', type=float, default=0., metavar='<momentum>',
 					help='momentum in gradient descent')
 parser.add_argument('--l1-reg', type=float, default=0.,
@@ -52,6 +54,8 @@ parser.add_argument('model_out', type=str, metavar='model-out',
 					help='the output file name you want for the output model')
 parser.add_argument('prediction_out', type=str, metavar='pred-out',
 					help='the output file name you want for the output predictions')
+
+
 args = parser.parse_args()
 
 INPUT_DIM = args.input_dim
@@ -63,6 +67,7 @@ BATCH_SIZE = args.batch_size
 LEARNING_RATE = args.learning_rate
 LEARNING_RATE_DECAY = args.learning_rate_decay
 MOMENTUM = args.momentum
+DROPOUT_RATE = args.dropout
 L1_REG = args.l1_reg
 L2_REG = args.l2_reg
 
@@ -77,29 +82,38 @@ def LoadData(filename, load_type):
         if load_type == 'train' or load_type == 'dev':
             data_x, data_y = cPickle.load(f)
             shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX))
-            shared_y = theano.shared(np.asarray(data_y, dtype='int32'), borrow=True)
+            shared_y = theano.shared(np.asarray(data_y, dtype='int32'))
             return shared_x, shared_y
         else:
             data_x, test_id = cPickle.load(f)
-            shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX), borrow=True)
-            return shared_x, test_id
-        '''
-        if load_type == 'train':
-            data_x, data_y = cPickle.load(f)
-            shared_x = np.asarray(data_x, dtype=theano.config.floatX)
-            shared_y = theano.shared(np.asarray(data_y, dtype='int32'), borrow=True)
-            return shared_x, shared_y
-        elif load_type == 'dev':
-            data_x, data_y = cPickle.load(f)
             shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX))
-            shared_y = theano.shared(np.asarray(data_y, dtype='int32'), borrow=True)
-            return shared_x, shared_y
-        '''
+            return shared_x, test_id
 
-def Update(params, gradients, velocities):
+def Update(params, gradients, velocities, probparams):
     global MOMENTUM
     global LEARNING_RATE
     global LEARNING_RATE_DECAY
+    global DROPOUT_RATE
+    global INPUT_DIM
+    global NEURONS_PER_LAYER
+
+    x_ones = theano.shared(np.ones(INPUT_DIM).astype(dtype=theano.config.floatX))
+    a_ones = theano.shared(np.ones(NEURONS_PER_LAYER).astype(dtype=theano.config.floatX))
+    para = []
+    velo = []
+
+    for i in range(0, len(probparams)):
+        if i == 0:
+            velo.append(velocities[0] * (probparams[0] + (x_ones - probparams[0])/MOMENTUM).dimshuffle('x' , 0))
+            velo.append(velocities[1] * (probparams[0] + (x_ones - probparams[0])/MOMENTUM).dimshuffle(0 , 'x'))
+            para.append(params[0] - velo[0])
+            para.append(params[1] - velo[1])
+        else :
+            velo.append(velocities[i*2] * (probparams[i] + (a_ones - probparams[i])/MOMENTUM).dimshuffle('x' , 0))
+            velo.append(velocities[i*2+1] * (probparams[i] + (a_ones - probparams[i])/MOMENTUM).dimshuffle(0 , 'x'))
+            para.append(params[i*2] - velo[i*2])
+            para.append(params[i*2+1] - velo[i*2+1])
+
     param_updates = [ (v, v * MOMENTUM - LEARNING_RATE * g) for g, v in zip(gradients, velocities) ]
     for i in range(0, len(gradients)):
         velocities[i] = velocities[i] * MOMENTUM - LEARNING_RATE * gradients[i]
@@ -111,25 +125,31 @@ def Update(params, gradients, velocities):
 #   Load Data    #
 ##################
 
-# Load Dev data
-print("===============================")
-print("Loading dev data...")
-val_x, val_y = LoadData(args.dev_in,'dev')
-print("Current time: %f" % (time.time()-start_time))
-
 # Load Training data
 print("===============================")
 print("Loading training data...")
 train_x, train_y = LoadData(args.train_in,'train')
 print("Current time: %f" % (time.time()-start_time))
 
-#print >> sys.stderr, type(train_x)
-#print >> sys.stderr, train_x.shape
+# Load Dev data
+print("===============================")
+print("Loading dev data...")
+val_x, val_y = LoadData(args.dev_in,'dev')
+print("Current time: %f" % (time.time()-start_time))
+
+# Load Test data
+print("===============================")
+print("Loading test data...")
+test_x, test_id = LoadData(args.test_in,'test')
+print("Current time: %f" % (time.time()-start_time))
+
 print >> sys.stderr, "After loading: %f" % (time.time()-start_time)
 
 ###############
 # Build Model #
 ###############
+
+#rng = np.random.RandomState(12345)
 
 # symbolic variables
 index = T.lscalar()
@@ -142,7 +162,8 @@ classifier = MLP(
         n_in=INPUT_DIM,
         n_hidden=NEURONS_PER_LAYER,
         n_out=OUTPUT_DIM,
-        n_layers=HIDDEN_LAYERS
+        n_layers=HIDDEN_LAYERS,
+	drop_out=DROPOUT_RATE
 )
 
 # cost + regularization terms; cost is symbolic
@@ -162,6 +183,14 @@ dev_model = theano.function(
         }
 )
 
+# compile "test model" function
+test_model = theano.function(
+        inputs=[],
+        outputs=classifier.y_pred,
+        givens={
+            x: test_x.T
+        }
+)
 
 # gradients
 dparams = [ T.grad(cost, param) for param in classifier.params ]
@@ -169,9 +198,8 @@ dparams = [ T.grad(cost, param) for param in classifier.params ]
 # compile "train model" function
 train_model = theano.function(
         inputs=[index],
-        #inputs=[x, index],
         outputs=cost,
-        updates=Update(classifier.params, dparams, classifier.velo),
+        updates=Update(classifier.params, dparams, classifier.velo, classifier.probparams),
         givens={
             x: train_x[ index * BATCH_SIZE : (index + 1) * BATCH_SIZE ].T,
             y: train_y[ index * BATCH_SIZE : (index + 1) * BATCH_SIZE ].T,
@@ -222,9 +250,8 @@ while (epoch < EPOCHS) and training:
     print("EPOCH: " + str(epoch))
     random.shuffle(minibatch_indices)
     for minibatch_index in minibatch_indices:
-        #x_in = train_x[ minibatch_index * BATCH_SIZE : (minibatch_index + 1) * BATCH_SIZE ].T
-        #batch_cost = train_model(x_in, minibatch_index)
         batch_cost = train_model(minibatch_index)
+        classifier.randomize_dropout(DROPOUT_RATE)
         iteration = (epoch - 1) * train_num + minibatch_index
         '''
         if (iteration + 1) % val_freq == 0:
@@ -248,44 +275,22 @@ while (epoch < EPOCHS) and training:
     dev_acc.append(val_acc)
     print("dev accuracy: " + str(dev_acc[-1]))
     print("Current time: " + str(time.time()-start_time))
-    if epoch == 50:
-        classifier.save_model("models/50_temp.mdl")
-    elif epoch == 100:
-        classifier.save_model("models/100_temp.mdl")
-    elif epoch == 150:
-        classifier.save_model("models/200_temp.mdl")
 #print(('Optimization complete. Best validation score of %f %% '
 #        'obtained at iteration %i') %
 #        (best_val_loss * 100., best_iter + 1))
 print("===============================")
 print >> sys.stderr, dev_acc
 classifier.save_model(args.model_out)
-train_x.set_value([[]])
-train_y.set_value([])
-val_x.set_value([[]])
-val_y.set_value([])
 
-# Load Test data
-print("===============================")
-print("Loading test data...")
-test_x, test_id = LoadData(args.test_in,'test')
-print("Current time: %f" % (time.time()-start_time))
-
-# compile "test model" function
-test_model = theano.function(
-        inputs=[],
-        outputs=classifier.y_pred,
-        givens={
-            x: test_x.T
-        }
-)
+#Final correction due to dropout
+classifier.reset_dropout(DROPOUT_RATE)
 
 # Create Phone Map
-f = open('data/phones/state_48_39.map','r')
+f = open('data/phones/48_39.map','r')
 phone_map = {}
 i = 0
 for l in f:
-    phone_map[i] = l.strip(' \n').split('\t')[2]
+    phone_map[i] = l.strip(' \n').split('\t')[1]
     i += 1
 f.close()
 

@@ -6,6 +6,7 @@ __pycache__
 *.orig
 test*
 !test.py
+!test.sh
 *.tgz
 data
 training_data
@@ -13,7 +14,9 @@ smallset*
 debug*
 models
 *.in
+!4_layer_intermediate*
+!4_layer_adagrad_50*
+!4_layer_351*
 predictions
 log
 *.log
-!test_conv.py

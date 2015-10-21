@@ -13,7 +13,7 @@ import activation as a
 import cPickle
 
 class HiddenLayer:
-    def __init__(self, input, n_in, n_out, W=None, b=None, v_W=None, v_b=None, activation=a.relu):
+    def __init__(self, input, n_in, n_out, W=None, b=None, v_W=None, v_b=None, d_rate=0., activation=a.relu):
         self.input = input
         if W is None:
             W = theano.shared(np.random.randn(n_out, n_in).astype(dtype=theano.config.floatX)/np.sqrt(n_in))
@@ -27,8 +27,10 @@ class HiddenLayer:
         self.b = b
         self.v_W = v_W
         self.v_b = v_b
+        self.prob = theano.shared(np.random.binomial(1,(1-d_rate),n_in).astype(dtype=theano.config.floatX))
 
-        lin_output = a.relu(T.dot(self.W, input) + self.b.dimshuffle(0, 'x'))
+        input = input * self.prob.dimshuffle(0, 'x')
+        lin_output = a.relu(T.dot(self.W, input ) + self.b.dimshuffle(0, 'x'))
         self.output = (
                 lin_output if activation is None
                 else activation(lin_output)
@@ -37,9 +39,10 @@ class HiddenLayer:
         self.velo = [self.v_W, self.v_b]
 
 class MLP:
-    def __init__(self, input, n_in, n_hidden, n_out, n_layers):
+    def __init__(self, input, n_in, n_hidden, n_out, n_layers, drop_out):
         # hidden layers
         self.params = []
+        self.probparams = []
         self.hiddenLayers = []
         self.velo = []
         self.hiddenLayers.append(
@@ -47,22 +50,26 @@ class MLP:
                     input=input,
                     n_in=n_in,
                     n_out=n_hidden,
+                    d_rate=drop_out,
                     activation=a.relu
                 )
         )
         self.params.extend(self.hiddenLayers[0].params)
         self.velo.extend(self.hiddenLayers[0].velo)
+        self.probparams.append(self.hiddenLayers[0].prob)
         for i in range(1, n_layers):
             self.hiddenLayers.append(
                 HiddenLayer(
                     input=self.hiddenLayers[i-1].output,
                     n_in=n_hidden,
                     n_out=n_hidden,
+                    d_rate=drop_out,
                     activation=a.relu
                 )
             )
             self.params.extend(self.hiddenLayers[i].params)
             self.velo.extend(self.hiddenLayers[i].velo)
+            self.probparams.append(self.hiddenLayers[i].prob)
         # output layer
         self.logRegressionLayer = LogisticRegression(
                 input=self.hiddenLayers[n_layers-1].output,
@@ -90,20 +97,9 @@ class MLP:
         # predict
         self.y_pred = self.logRegressionLayer.y_pred
 
-    # save_model
-    def save_model(self, filename):
-        save_file = open(filename,'wb')
-        for layer in self.hiddenLayers:
-            cPickle.dump(layer.W.get_value(borrow=True), save_file, -1)
-            cPickle.dump(layer.b.get_value(borrow=True), save_file, -1)
-        cPickle.dump(self.logRegressionLayer.W.get_value(borrow=True), save_file, -1)
-        cPickle.dump(self.logRegressionLayer.b.get_value(borrow=True), save_file, -1)
-        save_file.close()
-    # load_model
-    def load_model(self, filename):
-        save_file = open(filename,'r')
-        for layer in self.hiddenLayers:
-            layer.W.set_value(cPickle.load(save_file), borrow=True)
-            layer.b.set_value(cPickle.load(save_file), borrow=True)
-        self.logRegressionLayer.W.set_value(cPickle.load(save_file), borrow=True)
-        self.logRegressionLayer.b.set_value(cPickle.load(save_file), borrow=True)
+    def randomize_dropout(self, rate):
+        for i in range(0,len(self.probparams)):
+            self.probparams[i].set_value(np.random.binomial(1, (1-rate), self.probparams[i].shape[0].eval()).astype(dtype = theano.config.floatX))
+
+    def reset_dropout(self, old_d_rate):
+ 
