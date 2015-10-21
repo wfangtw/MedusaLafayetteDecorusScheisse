@@ -54,6 +54,7 @@ with open(args.hmm_model_in, 'r') as f:
 
 init = np.zeros(1943)
 init[0] = 1
+init = np.log(init)
 print "Total time: %f" % (time.time()-start_time)
 
 def ViterbiDecode(prob, nframes):
@@ -61,10 +62,10 @@ def ViterbiDecode(prob, nframes):
     global trans
     back = np.zeros_like(prob, dtype='int32')
 
-    prob[0] = prob[0]* init
+    prob[0] = prob[0] + init
     for i in range(1, nframes):
-        x = prob[i-1] * trans
-        prob[i] = prob[i] * np.max(x, axis=1)
+        x = prob[i-1] + trans
+        prob[i] = prob[i] + np.max(x, axis=1)
         back[i] = np.argmax(x, axis=1)
 
     pred = []
@@ -116,9 +117,10 @@ f.write('Id,Prediction\n')
 print("Viterbi decoding...")
 current_idx = 0
 while current_idx < len(test_id):
+    print current_idx
     s_id = test_id[current_idx].rsplit('_',1)[0]
-    sentence_len = amount[current_idx]
-    pred = ViterbiDecode(y[current_idx : (current_idx + sentence_len)], sentence_len)
+    sentence_len = int(amount[s_id])
+    pred = ViterbiDecode(np.log(y[current_idx : (current_idx + sentence_len)]), sentence_len)
     # Write prediction
     for i in range(0, len(pred)):
         f.write(test_id[current_idx+i] + ',' + phone_map[pred[i]] + '\n')
