@@ -248,10 +248,10 @@ while (epoch < EPOCHS) and training:
                 training = False
                 break
         '''
-    print("cost: " + str(batch_cost))
-    if math.isnan(batch_cost):
-        print >> sys.stderr, "Epoch #%i: nan error!!!" % epoch
-        sys.exit()
+        #print("cost: " + str(batch_cost))
+        if math.isnan(batch_cost):
+            print >> sys.stderr, "Epoch #%i: nan error!!!" % epoch
+            sys.exit()
     val_acc = 1 - np.mean([ dev_model(i) for i in xrange(0, val_num) ])
     dev_acc.append(val_acc)
     print("dev accuracy: " + str(dev_acc[-1]))
@@ -266,6 +266,8 @@ while (epoch < EPOCHS) and training:
         classifier.save_model("models/60_temp.mdl")
     elif epoch == 80:
         classifier.save_model("models/80_temp.mdl")
+    elif epoch == 100:
+        classifier.save_model("models/100_temp.mdl")
 #print(('Optimization complete. Best validation score of %f %% '
 #        'obtained at iteration %i') %
 #        (best_val_loss * 100., best_iter + 1))
