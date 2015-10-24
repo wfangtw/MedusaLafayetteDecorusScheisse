@@ -71,6 +71,7 @@ start_time = time.time()
 
 def LoadData(filename, load_type):
     with open(filename,'r') as f:
+        '''
         if load_type == 'train' or load_type == 'dev':
             data_x, data_y = cPickle.load(f)
             shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX))
@@ -91,7 +92,7 @@ def LoadData(filename, load_type):
             shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX))
             shared_y = theano.shared(np.asarray(data_y, dtype='int32'), borrow=True)
             return shared_x, shared_y
-        '''
+
 '''
 #momentum
 def Update(params, gradients, velocities):
@@ -176,13 +177,13 @@ dparams = [ T.grad(cost, param) for param in classifier.params ]
 
 # compile "train model" function
 train_model = theano.function(
-        inputs=[index],
-        #inputs=[x, index],
+        #inputs=[index],
+        inputs=[x, index],
         outputs=cost,
         updates=Update(classifier.params, dparams, classifier.velo),
         givens={
-            x: train_x[ index * BATCH_SIZE : (index + 1) * BATCH_SIZE ].T,
-            y: train_y[ index * BATCH_SIZE : (index + 1) * BATCH_SIZE ].T,
+            #x: train_x[ index * BATCH_SIZE : (index + 1) * BATCH_SIZE ].T,
+            y: train_y[ index * BATCH_SIZE : (index + 1) * BATCH_SIZE ].T
         }
 )
 
@@ -230,9 +231,9 @@ while (epoch < EPOCHS) and training:
     print("EPOCH: " + str(epoch))
     random.shuffle(minibatch_indices)
     for minibatch_index in minibatch_indices:
-        #x_in = train_x[ minibatch_index * BATCH_SIZE : (minibatch_index + 1) * BATCH_SIZE ].T
-        #batch_cost = train_model(x_in, minibatch_index)
-        batch_cost = train_model(minibatch_index)
+        x_in = train_x[ minibatch_index * BATCH_SIZE : (minibatch_index + 1) * BATCH_SIZE ].T
+        batch_cost = train_model(x_in, minibatch_index)
+        #batch_cost = train_model(minibatch_index)
         iteration = (epoch - 1) * train_num + minibatch_index
         '''
         if (iteration + 1) % val_freq == 0:
@@ -248,10 +249,10 @@ while (epoch < EPOCHS) and training:
                 training = False
                 break
         '''
-    print("cost: " + str(batch_cost))
-    if math.isnan(batch_cost):
-        print >> sys.stderr, "Epoch #%i: nan error!!!" % epoch
-        sys.exit()
+        #print("cost: " + str(batch_cost))
+        if math.isnan(batch_cost):
+            print >> sys.stderr, "Epoch #%i: nan error!!!" % epoch
+            sys.exit()
     val_acc = 1 - np.mean([ dev_model(i) for i in xrange(0, val_num) ])
     dev_acc.append(val_acc)
     print("dev accuracy: " + str(dev_acc[-1]))

@@ -18,8 +18,8 @@ for line in f:
 f.close()
 
 # smoothen
-# smooth = np.ones(1943) * 0.01
-# transition = transition + smooth
+smooth = np.ones(1943) * 0.01
+transition = transition + smooth
 # transition = transition + np.ones(6)
 
 # convert to prob.
@@ -35,7 +35,7 @@ with open("../data/mfcc/test.ark", "r") as f:
         amount[s_id] = index
 
 # write to hmm file
-with open("../training_data/hmm.mdl", "w") as f:
+with open("../training_data/hmm_smooth_2.mdl", "w") as f:
     # f.write(str(transition.tolist()))
     # f.write(str(total.tolist()))
     # f.write(str(amount))

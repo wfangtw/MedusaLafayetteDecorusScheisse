@@ -14,11 +14,11 @@ log_dir=log
 
 n_in=351
 n_out=1943
-n_layers=4
+n_layers=3
 n_neurons=2048
 epochs=100
 batch_size=256
-learning_rate=0.001
+learning_rate=0.002
 decay=1.0
 momentum=0.0
 l2_reg=0.0001
