@@ -1,36 +1,4 @@
-usage: train.py [-h] --input-dim nIn --output-dim nOut --hidden-layers nLayers
-                --neurons-per-layer nNeurons --max-epochs nEpochs
-                [--batch-size BATCH_SIZE] [--learning-rate LEARNING_RATE]
-                [--learning-rate-decay LEARNING_RATE_DECAY]
-                [--momentum MOMENTUM] [--l1-reg L1_REG] [--l2-reg L2_REG]
-                train-filename dev-filename test-filename model-filename
-                pred-filename
+# MLDS_hw1
+To run our program, type "bash run.sh" at the terminal.
 
-Train DNN for Phone Classification.
-
-positional arguments:
-  train-filename        training data file name
-  dev-filename          development data file name
-  test-filename         testing data file name
-  model-filename        the output file name you want for the output model
-  pred-filename         the output file name you want for the output
-                        predictions
-
-optional arguments:
-  -h, --help            show this help message and exit
-  --input-dim nIn       input dimension of network
-  --output-dim nOut     output dimension of network
-  --hidden-layers nLayers
-                        number of hidden layers
-  --neurons-per-layer nNeurons
-                        number of neurons in a hidden layer
-  --max-epochs nEpochs  number of maximum epochs
-  --batch-size BATCH_SIZE
-                        size of minibatch
-  --learning-rate LEARNING_RATE
-                        learning rate of gradient descent
-  --learning-rate-decay LEARNING_RATE_DECAY
-                        learning rate decay
-  --momentum MOMENTUM   momentum in gradient descent
-  --l1-reg L1_REG       L1 regularization
-  --l2-reg L2_REG       L2 regularization
+All parameters are writen in the run.sh.

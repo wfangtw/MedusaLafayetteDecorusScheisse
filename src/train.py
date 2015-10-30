@@ -268,6 +268,8 @@ while (epoch < EPOCHS) and training:
         classifier.save_model("models/80_temp.mdl")
     elif epoch == 100:
         classifier.save_model("models/100_temp.mdl")
+    elif epoch == 120:
+        classifier.save_model("models/120_temp.mdl")
 #print(('Optimization complete. Best validation score of %f %% '
 #        'obtained at iteration %i') %
 #        (best_val_loss * 100., best_iter + 1))
