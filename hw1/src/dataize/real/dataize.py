@@ -10,8 +10,6 @@ train_op = []   # [ [1943 dim], [1943 dim], ... ]
 dev_ip = []     # data for validation
 dev_op = []     # data for validation
 
-map_1943_39 = {}      # map 1943 phones to 39 phones
-
 label_dim = {}        # map label to id_list, id_list to dim_39[]
 
 # parse label/train.lab
@@ -59,15 +57,6 @@ label_dev = label_dev_male + label_dev_female
 #print "female: " + str(len(label_female))
 #for key, value in label_head.iteritems():
 #    print key + ": " + str(len(value))             # every data has 8 sentences
-
-# parse phones/48_39.map
-
-f_map = open("../../../data/phones/state_48_39.map", "r")
-
-for index, line in enumerate(f_map):
-    l = line.strip(' \n').split("\t")
-    map_1943_39[l[0]] = l[2]
-f_map.close()
 
 # parse mfcc/train.ark
 print "parse train.ark"
