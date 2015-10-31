@@ -17,7 +17,7 @@ import numpy as np
 import theano
 import theano.tensor as T
 
-from nn.dnn import MLP
+from nn.dnn import RNN
 
 parser = argparse.ArgumentParser(prog='train.py', description='Train DNN for Phone Classification.')
 parser.add_argument('--input-dim', type=int, required=True, metavar='<nIn>',
@@ -30,8 +30,8 @@ parser.add_argument('--neurons-per-layer', type=int, required=True, metavar='<nN
 					help='number of neurons in a hidden layer')
 parser.add_argument('--max-epochs', type=int, required=True, metavar='<nEpochs>',
 					help='number of maximum epochs')
-parser.add_argument('--batch-size', type=int, default=1, metavar='<size>',
-					help='size of minibatch')
+#parser.add_argument('--batch-size', type=int, default=1, metavar='<size>',
+#					help='size of minibatch')
 parser.add_argument('--learning-rate', type=float, default=0.0001, metavar='<rate>',
 					help='learning rate of gradient descent')
 parser.add_argument('--learning-rate-decay', type=float, default=1., metavar='<decay>',
@@ -55,7 +55,7 @@ OUTPUT_DIM = args.output_dim
 HIDDEN_LAYERS = args.hidden_layers
 NEURONS_PER_LAYER = args.neurons_per_layer
 EPOCHS = args.max_epochs
-BATCH_SIZE = args.batch_size
+#BATCH_SIZE = args.batch_size
 LEARNING_RATE = args.learning_rate
 LEARNING_RATE_DECAY = args.learning_rate_decay
 MOMENTUM = args.momentum
