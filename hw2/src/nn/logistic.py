@@ -11,24 +11,25 @@ import theano.tensor as T
 import activation as a
 
 class LogisticRegression:
-    def __init__(self, input, n_in, n_out, W=None, b=None):
+    def __init__(self, input_list, n_in, n_out, W=None, b=None):
         if W is None:
             W = theano.shared(np.random.randn(n_in, n_out).astype(dtype=theano.config.floatX)/np.sqrt(n_in))
         if b is None:
             b = theano.shared(np.random.randn(n_out).astype(dtype=theano.config.floatX))
         self.W = W
         self.b = b
-        self.v_W = theano.shared(np.zeros((n_out, n_in)).astype(dtype=theano.config.floatX))
+        self.v_W = theano.shared(np.zeros((n_in, n_out)).astype(dtype=theano.config.floatX))
         self.v_b = theano.shared(np.zeros(n_out).astype(dtype=theano.config.floatX))
 
-        self.y = a.softmax( T.dot(input, W) + b)
-        self.y_pred = T.argmax(self.y, axis=0)
+        self.input_list = input_list
+        y_average = 0.5 * (self.input_list[0] + self.input_list[1][::-1])
+        self.y = a.softmax( T.dot(y_average, W) + b)
+        self.y_pred = T.argmax(self.y, axis=1)
         self.params = [self.W, self.b]
         self.velo = [self.v_W, self.v_b]
-        self.input = input
 
     def negative_log_likelihood(self, y):
-        return -T.mean(T.log(self.y)[y,T.arange(y.shape[0])])
+        return -T.mean(T.log(self.y)[T.arange(y.shape[0]),y])
 
     def errors(self, y):
         # check if y has same dimension of y_pred
