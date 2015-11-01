@@ -10,7 +10,7 @@ label_dim = {}        # label_dim[axxxx_yyyy] = [ [108 dim], [108dim], ...]
 with open("label.dev", "r") as f:
     label_dev = cPickle.load(f)
     label = cPickle.load(f)
-    label_frame = cPickle.load(f)
+    label_train = cPickle.load(f)
 
 # parse mfcc/train.ark & fbank/train.ark
 print "======================================"
@@ -34,7 +34,7 @@ for mfcc_line, fbank_line in zip(f_mfcc, f_fbank):
         label_dim[m_id] = [m_l[1:] + f_l[1:]]
 f_mfcc.close()
 f_fbank.close()
-'''
+
 # generate train batch files
 print "===================================="
 print "     generate train batch files     "
@@ -44,7 +44,9 @@ train_op = []   # [ 0~1942, 0~1942, ... ]
 dim_972 = []
 sn = 0
 i = 1
-for frame in label_frame:
+if len(label_train) % 256 != 0:
+    label_train = label_train[:int(len(label_train)/256)*256]
+for frame in label_train:
 
     frame_name, frame_index = frame.rsplit('_', 1)      # axxxx_yyyyy, z
     frame_index = int(frame_index) - 1
@@ -63,40 +65,48 @@ for frame in label_frame:
     if i % 256 == 0:
         print "sn = " + str(sn)
 
-        # normalize train_ip
-        print "normalize train_ip"
-        train_ip = np.array(train_ip).astype(dtype=np.float64)
+        # normalize input
+        print "normalize input"
+        train_ip = np.asarray(train_ip, dtype=np.float64)
         train_mean = np.mean(train_ip, axis=0, dtype=np.float64, keepdims=True)
         train_std = np.std(train_ip, axis=0, dtype=np.float64, ddof=1, keepdims=True)
         train_ip = (train_ip - train_mean) / train_std
 
-        # make it theano
-        # print "make it theano"
-        # train_Tdata_ip = np.array(train_ip.tolist()).astype(theano.config.floatX).T
-        # train_Tdata_op = np.array(train_op).astype(theano.config.floatX).T
+        # make input theano
+        print "make input theano"
+        train_Tdata_ip = np.asarray(train_ip.tolist(), dtype=theano.config.floatX).T
 
-        # write to file
-        print "write to file"
-        train = (train_ip.tolist(), train_op)
-        # train_Tdata = (train_Tdata_ip, train_Tdata_op)
+        # write input to file
+        print "write input to file"
         # f_name = "../../../training_data/expert/train.in." + str(sn)
         f_name = "../../../training_data/expert/train_theano.in." + str(sn)
         with open(f_name, "w") as f:
-            f.write(str(train))
-            # cPickle.dump(train, f)
-            # f.write(str(train_Tdata))
-            # cPickle.dump(train_Tdata, f)
+            # f.write(str(train_ip))
+            # cPickle.dump(train_ip, f)
+            # f.write(str(train_Tdata_ip))
+            cPickle.dump(train_Tdata_ip, f)
 
         # reset variables
         sn += 1
         train_ip = []
-        train_op = []
     i += 1
     dim_972 = []
+# make output theano
+print "make output theano"
+train_Tdata_op = np.asarray(train_op, dtype=np.int32).T
+
+# write output to file
+print "write output to file"
+# with open("../../../training_data/expert/train.out", "w") as f:
+with open("../../../training_data/expert/train_theano.out", "w") as f:
+    # f.write(str(train_op))
+    # cPickle.dump(train_op, f)
+    # f.write(str(train_Tdata_op))
+    cPickle.dump(train_Tdata_op, f)
 
 print "total " + str(i-1) + " frames."
 print "left " + str(i - sn*256 - 1) + " frames."
-'''
+
 # generate dev file
 print "==========================="
 print "     generate dev file     "
@@ -120,27 +130,28 @@ for instance in label_dev:
         dev_ip.append(dim_972)
         dev_op.append(label[instance][i])
         total += 1
+        dim_972 = []
 print "total " + str(total) + " frames."
 
 # normalize dev_ip
 print "normalize dev_ip"
-dev_ip = np.array(dev_ip).astype(dtype=np.float64)
+dev_ip = np.asarray(dev_ip, dtype=np.float64)
 dev_mean = np.mean(dev_ip, axis=0, dtype=np.float64, keepdims=True)
 dev_std = np.std(dev_ip, axis=0, dtype=np.float64, ddof=1, keepdims=True)
 dev_ip = (dev_ip - dev_mean) / dev_std
 
 # make it theano
-# print "make it theano"
-# dev_Tdata_ip = np.array(dev_ip.tolist()).astype(theano.config.floatX).T
-# dev_Tdata_op = np.array(dev_op).astype(theano.config.floatX).T
+print "make it theano"
+dev_Tdata_ip = np.asarray(dev_ip.tolist(), dtype=theano.config.floatX).T
+dev_Tdata_op = np.asarray(dev_op, dtype=int32).T
 
 # write to file
 print "write to file"
-dev = (dev_ip.tolist(), dev_op)
-# dev_Tdata = (dev_Tdata_ip, dev_Tdata_op)
-with open("../../../training_data/expert/dev.in", "w") as f_dev:
-# with open("../../../training_data/expert/dev_theano.in", "w") as f_dev:
-    f_dev.write(str(dev))
+# dev = (dev_ip.tolist(), dev_op)
+dev_Tdata = (dev_Tdata_ip, dev_Tdata_op)
+# with open("../../../training_data/expert/dev.in", "w") as f_dev:
+with open("../../../training_data/expert/dev_theano.in", "w") as f_dev:
+    # f_dev.write(str(dev))
     # cPickle.dump(dev, f_dev)
     # f_dev.write(str(dev_Tdata))
-    # cPickle.dump(dev_Tdata, f_dev)
+    cPickle.dump(dev_Tdata, f_dev)
