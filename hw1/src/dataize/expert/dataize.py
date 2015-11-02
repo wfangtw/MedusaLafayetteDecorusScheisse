@@ -34,7 +34,6 @@ for mfcc_line, fbank_line in zip(f_mfcc, f_fbank):
 f_mfcc.close()
 f_fbank.close()
 
-'''
 # generate train batch files
 print "===================================="
 print "     generate train batch files     "
@@ -78,12 +77,8 @@ for frame in label_train:
 
         # write input to file
         print "write input to file"
-        # f_name = "../../../training_data/expert/train.in." + str(sn)
-        f_name = "../../../training_data/expert/train_theano.in." + str(sn)
+        f_name = "../../../training_data/expert/train.x." + str(sn)
         with open(f_name, "wb") as f:
-            # f.write(str(train_ip))
-            # cPickle.dump(train_ip, f)
-            # f.write(str(train_Tdata_ip))
             cPickle.dump(train_Tdata_ip, f, 2)
 
         # reset variables
@@ -91,22 +86,17 @@ for frame in label_train:
         train_ip = []
     i += 1
     dim_972 = []
-# make output theano
-print "make output theano"
+# make output numpy
+print "make output numpy"
 train_Tdata_op = np.asarray(train_op, dtype=np.int32)
 
 # write output to file
 print "write output to file"
-# with open("../../../training_data/expert/train.out", "w") as f:
-with open("../../../training_data/expert/train_theano.out", "wb") as f:
-    # f.write(str(train_op))
-    # cPickle.dump(train_op, f)
-    # f.write(str(train_Tdata_op))
+with open("../../../training_data/expert/train.y", "wb") as f:
     cPickle.dump(train_Tdata_op, f, 2)
 
 print "total " + str(i-1) + " frames."
 print "last file " + str(i - (sn - 1)*256 - 1) + " frames."
-'''
 
 # generate dev file
 print "==========================="
@@ -141,18 +131,13 @@ dev_mean = np.mean(dev_ip, axis=0, dtype=np.float64, keepdims=True)
 dev_std = np.std(dev_ip, axis=0, dtype=np.float64, ddof=1, keepdims=True)
 dev_ip = (dev_ip - dev_mean) / dev_std
 
-# make it theano
-print "make it theano"
+# make it theano & numpy
+print "make it theano & numpy"
 dev_Tdata_ip = np.asarray(dev_ip.tolist(), dtype=theano.config.floatX)
 dev_Tdata_op = np.asarray(dev_op, dtype=np.int32)
 
 # write to file
 print "write to file"
-# dev = (dev_ip.tolist(), dev_op)
 dev_Tdata = (dev_Tdata_ip, dev_Tdata_op)
-# with open("../../../training_data/expert/dev.in", "w") as f_dev:
-with open("../../../training_data/expert/dev_theano.in", "wb") as f_dev:
-    # f_dev.write(str(dev))
-    # cPickle.dump(dev, f_dev)
-    # f_dev.write(str(dev_Tdata))
-    cPickle.dump(dev_Tdata, f_dev, 2)
+with open("../../../training_data/expert/dev.xy", "wb") as f:
+    cPickle.dump(dev_Tdata, f, 2)

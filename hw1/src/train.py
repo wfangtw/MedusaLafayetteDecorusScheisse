@@ -71,23 +71,12 @@ start_time = time.time()
 
 def LoadData(filename, load_type):
     with open(filename,'rb') as f:
-        '''
-        if load_type == 'train' or load_type == 'dev':
-            data_x, data_y = cPickle.load(f)
-            shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX))
-            shared_y = theano.shared(np.asarray(data_y, dtype='int32'), borrow=True)
-            return shared_x, shared_y
-        else:
-            data_x, test_id = cPickle.load(f)
-            shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX), borrow=True)
-            return shared_x, test_id
-        '''
-        if load_type == 'train':
+        if load_type == 'train_xy':
             data_x, data_y = cPickle.load(f)
             shared_x = data_x
             shared_y = theano.shared(data_y, borrow=True)
             return shared_x, shared_y
-        elif load_type == 'dev':
+        elif load_type == 'dev_xy':
             data_x, data_y = cPickle.load(f)
             shared_x = theano.shared(data_x)
             shared_y = theano.shared(data_y, borrow=True)
@@ -96,7 +85,6 @@ def LoadData(filename, load_type):
             data_y = cPickle.load(f)
             shared_y = theano.shared(data_y, borrow=True)
             return shared_y
-
 
 '''
 #momentum
@@ -130,15 +118,16 @@ def Update(params, gradients, square_gra):
 # Load Dev data
 print("===============================")
 print("Loading dev data...")
-val_x, val_y = LoadData(args.dev_in,'dev')
+f_xy = args.dev_in + ".xy"
+val_x, val_y = LoadData(f_xy,'dev_xy')
 print("Current time: %f" % (time.time()-start_time))
 
 # Load Training data
 print("===============================")
 print("Loading training data...")
-# train_x, train_y = LoadData(args.train_in,'train')
-f_y_in = args.train_in + '.out'
-train_y = LoadData(f_y_in,'train_y')
+# train_x, train_y = LoadData(args.train_in,'train_xy')
+f_y = args.train_in + '.y'
+train_y = LoadData(f_y,'train_y')
 print("Current time: %f" % (time.time()-start_time))
 
 print >> sys.stderr, "After loading: %f" % (time.time()-start_time)
@@ -238,7 +227,7 @@ while (epoch < EPOCHS) and training:
     print("EPOCH: " + str(epoch))
     random.shuffle(minibatch_indices)
     for minibatch_index in minibatch_indices:
-        file_batch = args.train_in + '.in.' + str(minibatch_index)
+        file_batch = args.train_in + ".x." + str(minibatch_index)
         with open(file_batch, "rb") as f:
             x_in = cPickle.load(f)
         # x_in = train_x[ minibatch_index * BATCH_SIZE : (minibatch_index + 1) * BATCH_SIZE ].T

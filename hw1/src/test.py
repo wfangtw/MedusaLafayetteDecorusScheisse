@@ -45,14 +45,16 @@ NEURONS_PER_LAYER = args.neurons_per_layer
 
 def LoadData(filename, load_type):
     with open(filename,'rb') as f:
-        data_x, test_id = cPickle.load(f)
-        shared_x = theano.shared(data_x)
-        return shared_x, test_id
+        if load_type == "test_xy":
+            data_x, test_id = cPickle.load(f)
+            shared_x = theano.shared(data_x)
+            return shared_x, test_id
 
 start_time = time.time()
 print("===============================")
 print("Loading test data...")
-test_x, test_id = LoadData(args.test_in,'test')
+f_xy = args.test_in + ".xy.2"
+test_x, test_id = LoadData(f_xy,'test_xy')
 print "Total time: %f" % (time.time()-start_time)
 
 x = T.matrix(dtype=theano.config.floatX)
@@ -91,16 +93,26 @@ y_prob = y_prob.tolist()
 print("Current time: %f" % (time.time()-start_time))
 
 # Write prediction
+print "Write prediction"
 f = open(args.prediction_out,'w')
 f.write('Id,Prediction\n')
-for i in range(0, len(y)):
+for i in range(len(y)):
     f.write(test_id[i] + ',' + phone_map[y[i]] + '\n')
 f.close()
 
 # Write probability
-with open(args.probability_out,'w') as f:
-    f.write(str(y_prob))
-    # cPickle.dump(y_prob, f)
+print "Write probability"
+sn = 0
+start = 0
+for i in range(len(y)):
+    if int(test_id[i+1].rsplit('_', 1)[1]) == 1:
+        print "sn = " + str(sn)
+        end = i + 1
+        f_name = args.probability_out + "." + str(sn)
+        with open(f_name,'wb') as f:
+            cPickle.dump(y_prob[start:end], f, 2)
+        sn += 1
+        start = i + 1
 
 print("===============================")
 print("Total time: " + str(time.time()-start_time))

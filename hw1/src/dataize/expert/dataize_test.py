@@ -37,8 +37,8 @@ print "     parse mfcc & fbank test.ark     "
 print "======================================"
 
 label_dim = {}  # label frame
-f_mfcc = open("../../../data/mfcc/test.ark", "r")
-f_fbank = open("../../../data/fbank/test.ark", "r")
+f_mfcc = open("../../../data/mfcc/test.ark.2", "r")
+f_fbank = open("../../../data/fbank/test.ark.2", "r")
 
 for mfcc_line, fbank_line in zip(f_mfcc, f_fbank):
     m_l = mfcc_line.strip(' \n').split(' ')
@@ -83,22 +83,18 @@ for instance in label_dim:
 print "total " + str(total) + " frames."
 
 # normalize test_ip
+print "normalize input"
 test_ip = np.asarray(test_ip, dtype=np.float64)
 mean = np.mean(test_ip, axis=0, dtype=np.float64, keepdims=True)
 std = np.std(test_ip, axis=0, dtype=np.float64, ddof=1, keepdims=True)
 test_ip = (test_ip - mean) / std
 
-# make it theano
-print "make it theano"
+# make input theano
+print "make input theano"
 test_Tdata_ip = np.asarray(test_ip.tolist(), dtype=theano.config.floatX).T
 
 # write to file
 print "write to file"
-# test = (test_ip.tolist(), test_op)
 test_Tdata = (test_Tdata_ip, test_op)
-# with open("../../../training_data/expert/test.in", "w") as f_test:
-with open("../../../training_data/expert/test_theano.in", "wb") as f_test:
-    # f_test.write(str(test))
-    # cPickle.dump(test, f_test)
-    # f_test.write(str(test_Tdata))
-    cPickle.dump(test_Tdata, f_test, 2)
+with open("../../../training_data/expert/test.xy.2", "wb") as f:
+    cPickle.dump(test_Tdata, f, 2)

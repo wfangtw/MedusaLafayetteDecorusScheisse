@@ -2,7 +2,7 @@
 
 if [ $# -ne 3 ]; then
     echo "Usage: test.sh <training-data-subdirectory> <model name(without suffix)> <output name(without suffix)>"
-	echo "ex: run.sh simple mymodel myoutput"
+	echo "ex: test.sh simple mymodel myoutput"
 	exit 1;
 fi
 
@@ -21,5 +21,7 @@ n_neurons=1024
 
 python2 -u $src_dir/test.py --input-dim $n_in --output-dim $n_out \
 	--hidden-layers $n_layers --neurons-per-layer $n_neurons \
-    $data_dir/test_theano.in \
-	$model_dir/$2.mdl $pred_dir/$3.csv $prob_dir/$3 2> $log_dir/$3.log
+    $data_dir/test \
+	$model_dir/$2.mdl $pred_dir/$3.csv $prob_dir/$3.prb 2> $log_dir/$3.log
+
+echo "Program terminated."

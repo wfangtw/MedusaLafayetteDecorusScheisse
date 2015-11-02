@@ -14,7 +14,7 @@ log_dir=log
 
 n_in=972
 n_out=1943
-n_layers=4
+n_layers=5
 n_neurons=1024
 epochs=150
 batch_size=256
@@ -27,7 +27,7 @@ python2 -u $src_dir/train.py --input-dim $n_in --output-dim $n_out \
 	--hidden-layers $n_layers --neurons-per-layer $n_neurons \
 	--max-epochs $epochs --batch-size $batch_size --learning-rate $learning_rate \
 	--learning-rate-decay $decay --momentum $momentum --l2-reg $l2_reg \
-	$data_dir/train_theano $data_dir/dev_theano.in \
+	$data_dir/train $data_dir/dev \
 	$model_dir/$2.mdl 2> $log_dir/$2.log
 
 echo "Program terminated."
