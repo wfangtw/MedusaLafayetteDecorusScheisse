@@ -1,19 +1,12 @@
 #!/usr/bin/python
 import numpy as np
 import cPickle
-import random
-import sys
-
-test_ip = []    # [ [351 dim], [351 dim], ... ]
-test_op = []    # [ instant_ID, instant_ID, ... ]
-
-label_dim = {}  # label frame
 
 ## statistic of male and female
 #label_male = {}
 #label_female = {}
 #
-#f_mfcc = open("/project/peskotiveswf/Workspace/MLDS_hw1/data/mfcc/test.ark", "r")
+#f_mfcc = open("../../../data/mfcc/test.ark", "r")
 #
 #for line in f_mfcc:
 #    ll = line.strip(' \n').split(' ', 1)[0].split('_')
@@ -37,50 +30,74 @@ label_dim = {}  # label frame
 ##for key, value in label_female.iteritems():
 ##    print key + ": " + str(len(value))             # every data has 8 sentences
 
-# parse mfcc/test.ark
+# parse mfcc/test.ark & fbank/test.ark
+print "======================================"
+print "     parse mfcc & fbank test.ark     "
+print "======================================"
+
+label_dim = {}  # label frame
 f_mfcc = open("../../../data/mfcc/test.ark", "r")
+f_fbank = open("../../../data/fbank/test.ark", "r")
 
-for line in f_mfcc:
-    l = line.strip(' \n').split(' ')
-    ll = l[0].split('_')
-    id_name = ll[0]+'_'+ll[1]
+for mfcc_line, fbank_line in zip(f_mfcc, f_fbank):
+    m_l = mfcc_line.strip(' \n').split(' ')
+    f_l = fbank_line.strip(' \n').split(' ')
+    m_id = m_l[0].rsplit('_', 1)[0]             # axxxx_yyyyy
+    f_id = f_l[0].rsplit('_', 1)[0]             # axxxx_yyyyy
 
-    if id_name in label_dim:
-        label_dim[id_name].append(l[1:])
+    if m_id != f_id:
+        print "mfcc/fbank mismatch error"
+
+    if m_id in label_dim:
+        label_dim[m_id].append(m_l[1:] + f_l[1:])
     else:
-        label_dim[id_name] = [l[1:]]
+        label_dim[m_id] = [m_l[1:] + f_l[1:]]
 f_mfcc.close()
+f_fbank.close()
 
-train_ip = []
-
-for flabel in label_dim:
-    dim_351 = []
-    for x in range(6):
-        dim_351.extend(label_dim[flabel][0])
-    for x in range(3):
-        dim_351.extend(label_dim[flabel][1+x])
-    for x in range(len(label_dim[flabel])):
-        if x >= len(label_dim[flabel])-4:
-            dim_351.extend(label_dim[flabel][-1])
-        else:
-            dim_351.extend(label_dim[flabel][x+4])
-        for y in range(39):
-            dim_351.pop(0)
-
-        dim_351 = map(float, dim_351)
-        test_ip.append(dim_351)
-        test_op.append(flabel+'_'+str(x+1))
+# generate test file
+print "==========================="
+print "     generate test file     "
+print "==========================="
+test_ip = []     # [ [972 dim], [972 dim], ... ]   (39 + 69) * 9 = 972
+test_op = []     # [ axxxx_yyyyy_z, axxxx_yyyyy_z, ... ]
+dim_972 = []
+total = 0
+for instance in label_dim:
+    print instance + ": " + str(len(label_dim[instance]))
+    for i in range(len(label_dim[instance])):
+        for j in range(-4,5):
+            if i + j < 0:
+                idx = 0
+            elif i + j >= len(label_dim[instance]):
+                idx = len(label_dim[instance]) - 1
+            else:
+                idx = i + j
+            dim_972.extend(label_dim[instance][idx])
+        dim_972 = map(float, dim_972)
+        test_ip.append(dim_972)
+        test_op.append(instance + '_' + str(i + 1))
+        total += 1
+        dim_972 = []
+print "total " + str(total) + " frames."
 
 # normalize test_ip
-test_ip = np.array(test_ip).astype(dtype=np.float64)
+test_ip = np.asarray(test_ip, dtype=np.float64)
 mean = np.mean(test_ip, axis=0, dtype=np.float64, keepdims=True)
 std = np.std(test_ip, axis=0, dtype=np.float64, ddof=1, keepdims=True)
 test_ip = (test_ip - mean) / std
 
-# write to file
- test = (test_ip.tolist(), test_op)
-#test = (test_ip, test_op)
+# make it theano
+print "make it theano"
+test_Tdata_ip = np.asarray(test_ip.tolist(), dtype=theano.config.floatX).T
 
-with open("../../../training_data/real/test.in", "w") as f_test:
-    #f_test.write(str(test))
-    cPickle.dump(test, f_test)
+# write to file
+print "write to file"
+# test = (test_ip.tolist(), test_op)
+test_Tdata = (test_Tdata_ip, test_op)
+# with open("../../../training_data/expert/test.in", "w") as f_test:
+with open("../../../training_data/expert/test_theano.in", "wb") as f_test:
+    # f_test.write(str(test))
+    # cPickle.dump(test, f_test)
+    # f_test.write(str(test_Tdata))
+    cPickle.dump(test_Tdata, f_test, 2)
