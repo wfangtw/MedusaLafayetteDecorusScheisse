@@ -2,7 +2,6 @@
 import numpy as np
 import cPickle
 import theano
-import theano.tensor as T
 
 label_dim = {}        # label_dim[axxxx_yyyy] = [ [108 dim], [108dim], ...]
 

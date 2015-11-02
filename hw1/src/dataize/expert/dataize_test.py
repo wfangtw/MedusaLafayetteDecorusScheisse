@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import numpy as np
 import cPickle
+import theano
 
 ## statistic of male and female
 #label_male = {}
