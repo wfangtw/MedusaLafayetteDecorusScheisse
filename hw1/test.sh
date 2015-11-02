@@ -9,6 +9,7 @@ fi
 src_dir=src
 data_dir=training_data/$1
 pred_dir=predictions
+prob_dir=probabilities
 model_dir=models
 log_dir=log
 
@@ -20,5 +21,5 @@ n_neurons=1024
 
 python2 -u $src_dir/test.py --input-dim $n_in --output-dim $n_out \
 	--hidden-layers $n_layers --neurons-per-layer $n_neurons \
-    $data_dir/test.in \
-	$model_dir/$2.mdl $pred_dir/$3.csv 2> $log_dir/$3.log
+    $data_dir/test_theano.in \
+	$model_dir/$2.mdl $pred_dir/$3.csv $prob_dir/$3 2> $log_dir/$3.log
