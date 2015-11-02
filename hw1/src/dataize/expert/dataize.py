@@ -81,11 +81,11 @@ for frame in label_train:
         print "write input to file"
         # f_name = "../../../training_data/expert/train.in." + str(sn)
         f_name = "../../../training_data/expert/train_theano.in." + str(sn)
-        with open(f_name, "w") as f:
+        with open(f_name, "wb") as f:
             # f.write(str(train_ip))
             # cPickle.dump(train_ip, f)
             # f.write(str(train_Tdata_ip))
-            cPickle.dump(train_Tdata_ip, f)
+            cPickle.dump(train_Tdata_ip, f, 2)
 
         # reset variables
         sn += 1
@@ -99,14 +99,14 @@ train_Tdata_op = np.asarray(train_op, dtype=np.int32)
 # write output to file
 print "write output to file"
 # with open("../../../training_data/expert/train.out", "w") as f:
-with open("../../../training_data/expert/train_theano.out", "w") as f:
+with open("../../../training_data/expert/train_theano.out", "wb") as f:
     # f.write(str(train_op))
     # cPickle.dump(train_op, f)
     # f.write(str(train_Tdata_op))
-    cPickle.dump(train_Tdata_op, f)
+    cPickle.dump(train_Tdata_op, f, 2)
 
 print "total " + str(i-1) + " frames."
-print "last file " + str(i - sn*256 - 1) + " frames."
+print "last file " + str(i - (sn - 1)*256 - 1) + " frames."
 '''
 
 # generate dev file
@@ -152,8 +152,8 @@ print "write to file"
 # dev = (dev_ip.tolist(), dev_op)
 dev_Tdata = (dev_Tdata_ip, dev_Tdata_op)
 # with open("../../../training_data/expert/dev.in", "w") as f_dev:
-with open("../../../training_data/expert/dev_theano.in", "w") as f_dev:
+with open("../../../training_data/expert/dev_theano.in", "wb") as f_dev:
     # f_dev.write(str(dev))
     # cPickle.dump(dev, f_dev)
     # f_dev.write(str(dev_Tdata))
-    cPickle.dump(dev_Tdata, f_dev)
+    cPickle.dump(dev_Tdata, f_dev, 2)

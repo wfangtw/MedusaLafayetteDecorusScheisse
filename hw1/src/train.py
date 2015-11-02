@@ -70,7 +70,7 @@ start_time = time.time()
 ########################
 
 def LoadData(filename, load_type):
-    with open(filename,'r') as f:
+    with open(filename,'rb') as f:
         '''
         if load_type == 'train' or load_type == 'dev':
             data_x, data_y = cPickle.load(f)
@@ -93,7 +93,6 @@ def LoadData(filename, load_type):
             shared_y = theano.shared(data_y, borrow=True)
             return shared_x, shared_y
         elif load_type == 'train_y':
-            f = f + '.out'
             data_y = cPickle.load(f)
             shared_y = theano.shared(data_y, borrow=True)
             return shared_y
@@ -138,7 +137,8 @@ print("Current time: %f" % (time.time()-start_time))
 print("===============================")
 print("Loading training data...")
 # train_x, train_y = LoadData(args.train_in,'train')
-train_y = LoadData(args.train_in,'train_y')
+f_y_in = args.train_in + '.out'
+train_y = LoadData(f_y_in,'train_y')
 print("Current time: %f" % (time.time()-start_time))
 
 print >> sys.stderr, "After loading: %f" % (time.time()-start_time)
@@ -237,11 +237,16 @@ while (epoch < EPOCHS) and training:
     print("===============================")
     print("EPOCH: " + str(epoch))
     random.shuffle(minibatch_indices)
+    iter_cnt = 0
     for minibatch_index in minibatch_indices:
+        iter_cnt += 1
+        print("Iter %i" % iter_cnt)
+        print("Loading...Current time: %f" % (time.time()-start_time))
         file_batch = args.train_in + '.in.' + str(minibatch_index)
-        with open(file_batch, "r") as f:
+        with open(file_batch, "rb") as f:
             x_in = cPickle.load(f)
         # x_in = train_x[ minibatch_index * BATCH_SIZE : (minibatch_index + 1) * BATCH_SIZE ].T
+        print("Training...Current time: %f" % (time.time()-start_time))
         batch_cost = train_model(x_in, minibatch_index)
         #batch_cost = train_model(minibatch_index)
         # iteration = (epoch - 1) * train_num + minibatch_index
