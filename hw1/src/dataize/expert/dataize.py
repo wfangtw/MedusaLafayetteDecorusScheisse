@@ -35,6 +35,7 @@ for mfcc_line, fbank_line in zip(f_mfcc, f_fbank):
 f_mfcc.close()
 f_fbank.close()
 
+'''
 # generate train batch files
 print "===================================="
 print "     generate train batch files     "
@@ -106,6 +107,7 @@ with open("../../../training_data/expert/train_theano.out", "w") as f:
 
 print "total " + str(i-1) + " frames."
 print "last file " + str(i - sn*256 - 1) + " frames."
+'''
 
 # generate dev file
 print "==========================="
@@ -143,7 +145,7 @@ dev_ip = (dev_ip - dev_mean) / dev_std
 # make it theano
 print "make it theano"
 dev_Tdata_ip = np.asarray(dev_ip.tolist(), dtype=theano.config.floatX)
-dev_Tdata_op = np.asarray(dev_op, dtype=int32)
+dev_Tdata_op = np.asarray(dev_op, dtype=np.int32)
 
 # write to file
 print "write to file"
