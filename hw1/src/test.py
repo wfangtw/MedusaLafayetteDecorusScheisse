@@ -86,10 +86,8 @@ f.close()
 print("===============================")
 print("Start Testing")
 y, y_prob = test_model()
-print "type of y: " + str(type(y))
-print "type of y_prob: " + str(type(y_prob))
-y = np.asarray(y).tolist()
-y_prob = np.asarray(y_prob).tolist()
+y = y.tolist()
+y_prob = y_prob.tolist()
 print("Current time: %f" % (time.time()-start_time))
 
 # Write prediction

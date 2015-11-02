@@ -9,6 +9,7 @@
 **/training_data
 **/models
 **/predictions
+**/probabilities
 **/log
 **/*.log
 **/label.dev
