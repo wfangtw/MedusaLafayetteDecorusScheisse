@@ -44,8 +44,8 @@ train_op = []   # [ 0~1942, 0~1942, ... ]
 dim_972 = []
 sn = 0
 i = 1
-if len(label_train) % 256 != 0:
-    label_train = label_train[:int(len(label_train)/256)*256]
+# if len(label_train) % 256 != 0:
+    # label_train = label_train[:int(len(label_train)/256)*256]
 for frame in label_train:
 
     frame_name, frame_index = frame.rsplit('_', 1)      # axxxx_yyyyy, z
@@ -62,7 +62,7 @@ for frame in label_train:
     train_ip.append(dim_972)
     train_op.append(label[frame_name][frame_index])
 
-    if i % 256 == 0:
+    if i % 256 == 0 or i == len(label_train):
         print "sn = " + str(sn)
 
         # normalize input
@@ -93,7 +93,7 @@ for frame in label_train:
     dim_972 = []
 # make output theano
 print "make output theano"
-train_Tdata_op = np.asarray(train_op, dtype=np.int32).T
+train_Tdata_op = np.asarray(train_op, dtype=np.int32)
 
 # write output to file
 print "write output to file"
@@ -105,7 +105,7 @@ with open("../../../training_data/expert/train_theano.out", "w") as f:
     cPickle.dump(train_Tdata_op, f)
 
 print "total " + str(i-1) + " frames."
-print "left " + str(i - sn*256 - 1) + " frames."
+print "last file " + str(i - sn*256 - 1) + " frames."
 
 # generate dev file
 print "==========================="
@@ -142,8 +142,8 @@ dev_ip = (dev_ip - dev_mean) / dev_std
 
 # make it theano
 print "make it theano"
-dev_Tdata_ip = np.asarray(dev_ip.tolist(), dtype=theano.config.floatX).T
-dev_Tdata_op = np.asarray(dev_op, dtype=int32).T
+dev_Tdata_ip = np.asarray(dev_ip.tolist(), dtype=theano.config.floatX)
+dev_Tdata_op = np.asarray(dev_op, dtype=int32)
 
 # write to file
 print "write to file"
