@@ -15,18 +15,22 @@ import cPickle
 class HiddenLayer:
     def __init__(self, input_list, n_in, n_out, W=None, U=None,b=None, v_W=None,v_U=None ,v_b=None):
         self.input_list = input_list
+        w = np.zeros((n_in, n_out))
+        u = np.zeros((n_out, n_out))
+        np.fill_diagonal(w, 1)
+        np.fill_diagonal(u, 1)
         if W is None:
-            W = theano.shared(np.random.randn(n_in, n_out).astype(dtype=theano.config.floatX)/np.sqrt(n_in))
+            W = theano.shared(w.astype(dtype=theano.config.floatX))
         if U is None:
-            U = theano.shared(np.random.randn(n_out, n_out).astype(dtype=theano.config.floatX)/np.sqrt(n_out))
+            U = theano.shared(u.astype(dtype=theano.config.floatX))
         if b is None:
-            b = theano.shared(np.random.randn(n_out).astype(dtype=theano.config.floatX))
+            b = theano.shared(np.zeros(n_out).astype(dtype=theano.config.floatX))
         if v_W is None:
             v_W = theano.shared(np.zeros((n_in, n_out)).astype(dtype=theano.config.floatX))
         if v_b is None:
             v_b = theano.shared(np.zeros(n_out).astype(dtype=theano.config.floatX))
         if v_U is None:
-            v_U = theano.shared(np.zeros(n_out, n_out).astype(dtype=theano.config.floatX))
+            v_U = theano.shared(np.zeros((n_out, n_out)).astype(dtype=theano.config.floatX))
 
         self.W = W
         self.b = b
@@ -38,7 +42,7 @@ class HiddenLayer:
         self.velo = [self.v_W, self.v_U, self.v_b]
 
         def forward(input, pre_sequence):
-            lin_output = a.sigmoid(T.dot(input, self.W) +T.dot(input, self.U)+ self.b)
+            lin_output = a.relu(T.dot(input, self.W) +T.dot(pre_sequence, self.U)+ self.b)
             return lin_output
 
         pre_sequence_0 = theano.shared(np.zeros(n_out).astype(dtype=theano.config.floatX))
@@ -48,12 +52,12 @@ class HiddenLayer:
             sequences = self.input_list[0],
             outputs_info = pre_sequence_0,
             truncate_gradient = -1
-            ))
+            )[0])
         self.output_list.append(theano.scan(forward,
             sequences = self.input_list[1],
             outputs_info = pre_sequence_0,
             truncate_gradient = -1
-            ))
+            )[0])
 
 class RNN:
     def __init__(self, input, n_in, n_hidden, n_out, n_layers):

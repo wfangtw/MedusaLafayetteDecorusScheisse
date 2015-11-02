@@ -13,7 +13,12 @@ def relu(x):
 
 def softmax(vec):
         vec = T.exp(vec)
-        return vec / vec.sum(axis=0)
+        return vec / vec.sum(axis = 1, keepdims=True) 
+        
+
+def geometric(vec1, vec2):
+        vec = T.sqrt(vec1 * vec2)
+        return vec / vec.sum(axis = 1, keepdims=True)
 
 def sigmoid(x):
         return 1/(1+T.exp(-x))

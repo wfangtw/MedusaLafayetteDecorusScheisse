@@ -12,18 +12,21 @@ import activation as a
 
 class LogisticRegression:
     def __init__(self, input_list, n_in, n_out, W=None, b=None):
+        w = np.zeros((n_in,n_out))
+        np.fill_diagonal(w, 1)
+
         if W is None:
-            W = theano.shared(np.random.randn(n_in, n_out).astype(dtype=theano.config.floatX)/np.sqrt(n_in))
+            W = theano.shared(w.astype(dtype=theano.config.floatX))
         if b is None:
-            b = theano.shared(np.random.randn(n_out).astype(dtype=theano.config.floatX))
+            b = theano.shared(np.zeros(n_out).astype(dtype=theano.config.floatX))
         self.W = W
         self.b = b
         self.v_W = theano.shared(np.zeros((n_in, n_out)).astype(dtype=theano.config.floatX))
         self.v_b = theano.shared(np.zeros(n_out).astype(dtype=theano.config.floatX))
-
         self.input_list = input_list
-        y_average = 0.5 * (self.input_list[0] + self.input_list[1][::-1])
-        self.y = a.softmax( T.dot(y_average, W) + b)
+        self.y = a.geometric(a.softmax(T.dot(self.input_list[0], W) + b), a.softmax(T.dot(self.input_list[1][::-1], W) + b))
+        #self.y = a.softmax(T.dot(self.input_list[0], W) + b)
+        #self.y = self.input_list[0]
         self.y_pred = T.argmax(self.y, axis=1)
         self.params = [self.W, self.b]
         self.velo = [self.v_W, self.v_b]
