@@ -34,6 +34,8 @@ parser.add_argument('model_in', type=str, metavar='<model-in>',
 					help='the dnn model stored with cPickle')
 parser.add_argument('prediction_out', type=str, metavar='<pred-out>',
 					help='the output file name you want for the output predictions')
+parser.add_argument('probability_out', type=str, metavar='<prob-out>',
+					help='the output file name you want for the output probabilities')
 args = parser.parse_args()
 
 INPUT_DIM = args.input_dim
@@ -42,9 +44,9 @@ HIDDEN_LAYERS = args.hidden_layers
 NEURONS_PER_LAYER = args.neurons_per_layer
 
 def LoadData(filename, load_type):
-    with open(filename,'r') as f:
+    with open(filename,'rb') as f:
         data_x, test_id = cPickle.load(f)
-        shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX))
+        shared_x = theano.shared(data_x)
         return shared_x, test_id
 
 start_time = time.time()
@@ -66,9 +68,9 @@ classifier.load_model(args.model_in)
 
 test_model = theano.function(
         inputs=[],
-        outputs=classifier.y_pred,
+        outputs=(classifier.y_pred, classifier.output),
         givens={
-            x: test_x.T
+            x: test_x
         }
 )
 # Create Phone Map
@@ -83,7 +85,11 @@ f.close()
 # Testing
 print("===============================")
 print("Start Testing")
-y = np.asarray(test_model()).tolist()
+y, y_prob = test_model()
+print "type of y: " + str(type(y))
+print "type of y_prob: " + str(type(y_prob))
+y = np.asarray(y).tolist()
+y_prob = np.asarray(y_prob).tolist()
 print("Current time: %f" % (time.time()-start_time))
 
 # Write prediction
@@ -92,6 +98,11 @@ f.write('Id,Prediction\n')
 for i in range(0, len(y)):
     f.write(test_id[i] + ',' + phone_map[y[i]] + '\n')
 f.close()
+
+# Write probability
+with open(args.probability_out,'w') as f:
+    f.write(str(y_prob))
+    # cPickle.dump(y_prob, f)
 
 print("===============================")
 print("Total time: " + str(time.time()-start_time))
