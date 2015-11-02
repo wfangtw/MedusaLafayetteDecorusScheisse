@@ -84,14 +84,20 @@ def LoadData(filename, load_type):
         '''
         if load_type == 'train':
             data_x, data_y = cPickle.load(f)
-            shared_x = np.asarray(data_x, dtype=theano.config.floatX)
-            shared_y = theano.shared(np.asarray(data_y, dtype='int32'), borrow=True)
+            shared_x = data_x
+            shared_y = theano.shared(data_y, borrow=True)
             return shared_x, shared_y
         elif load_type == 'dev':
             data_x, data_y = cPickle.load(f)
-            shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX))
-            shared_y = theano.shared(np.asarray(data_y, dtype='int32'), borrow=True)
+            shared_x = theano.shared(data_x)
+            shared_y = theano.shared(data_y, borrow=True)
             return shared_x, shared_y
+        elif load_type == 'train_y':
+            f = f + '.out'
+            data_y = cPickle.load(f)
+            shared_y = theano.shared(data_y, borrow=True)
+            return shared_y
+
 
 '''
 #momentum
@@ -131,7 +137,8 @@ print("Current time: %f" % (time.time()-start_time))
 # Load Training data
 print("===============================")
 print("Loading training data...")
-train_x, train_y = LoadData(args.train_in,'train')
+# train_x, train_y = LoadData(args.train_in,'train')
+train_y = LoadData(args.train_in,'train_y')
 print("Current time: %f" % (time.time()-start_time))
 
 print >> sys.stderr, "After loading: %f" % (time.time()-start_time)
@@ -231,10 +238,13 @@ while (epoch < EPOCHS) and training:
     print("EPOCH: " + str(epoch))
     random.shuffle(minibatch_indices)
     for minibatch_index in minibatch_indices:
-        x_in = train_x[ minibatch_index * BATCH_SIZE : (minibatch_index + 1) * BATCH_SIZE ].T
+        file_batch = args.train_in + '.in.' + str(minibatch_index)
+        with open(file_batch, "r") as f:
+            x_in = cPickle.load(f)
+        # x_in = train_x[ minibatch_index * BATCH_SIZE : (minibatch_index + 1) * BATCH_SIZE ].T
         batch_cost = train_model(x_in, minibatch_index)
         #batch_cost = train_model(minibatch_index)
-        iteration = (epoch - 1) * train_num + minibatch_index
+        # iteration = (epoch - 1) * train_num + minibatch_index
         '''
         if (iteration + 1) % val_freq == 0:
             val_losses = [ dev_model(i) for i in xrange(0, train_num) ]
