@@ -3,6 +3,11 @@ import numpy as np
 import cPickle
 import theano
 
+# required parameters
+n = 11
+batch_size = 256
+out_dir = "expert11"
+
 label_dim = {}        # label_dim[axxxx_yyyy] = [ [108 dim], [108dim], ...]
 
 # load label_dev & label
@@ -38,30 +43,28 @@ f_fbank.close()
 print "===================================="
 print "     generate train batch files     "
 print "===================================="
-train_ip = []   # [ [972 dim], [972 dim], ... ]   (39 + 69) * 9 = 972
+train_ip = []   # [ [108*n dim], [108*n dim], ... ]   (39 + 69) * n
 train_op = []   # [ 0~1942, 0~1942, ... ]
-dim_972 = []
+dim_n = []
 sn = 0
 i = 1
-# if len(label_train) % 256 != 0:
-    # label_train = label_train[:int(len(label_train)/256)*256]
 for frame in label_train:
 
     frame_name, frame_index = frame.rsplit('_', 1)      # axxxx_yyyyy, z
     frame_index = int(frame_index) - 1
-    for j in range(-4,5):
+    for j in range(-1 * int(n/2), int(n/2 + 1)):
         if frame_index + j < 0:
             idx = 0
         elif frame_index + j >= len(label_dim[frame_name]):
             idx = len(label_dim[frame_name]) - 1
         else:
             idx = frame_index + j
-        dim_972.extend(label_dim[frame_name][idx])
-    dim_972 = map(float, dim_972)
-    train_ip.append(dim_972)
+        dim_n.extend(label_dim[frame_name][idx])
+    dim_n = map(float, dim_n)
+    train_ip.append(dim_n)
     train_op.append(label[frame_name][frame_index])
 
-    if i % 256 == 0 or i == len(label_train):
+    if i % batch_size == 0 or i == len(label_train):
         print "sn = " + str(sn)
 
         # normalize input
@@ -77,7 +80,7 @@ for frame in label_train:
 
         # write input to file
         print "write input to file"
-        f_name = "../../../training_data/expert/train.x." + str(sn)
+        f_name = "../../../training_data/" + out_dir + "/train.x." + str(sn)
         with open(f_name, "wb") as f:
             cPickle.dump(train_Tdata_ip, f, 2)
 
@@ -85,43 +88,43 @@ for frame in label_train:
         sn += 1
         train_ip = []
     i += 1
-    dim_972 = []
+    dim_n = []
 # make output numpy
 print "make output numpy"
 train_Tdata_op = np.asarray(train_op, dtype=np.int32)
 
 # write output to file
 print "write output to file"
-with open("../../../training_data/expert/train.y", "wb") as f:
+with open("../../../training_data/" + out_dir + "/train.y", "wb") as f:
     cPickle.dump(train_Tdata_op, f, 2)
 
 print "total " + str(i-1) + " frames."
-print "last file " + str(i - (sn - 1)*256 - 1) + " frames."
+print "last file " + str(i - (sn - 1) * batch_size - 1) + " frames."
 
 # generate dev file
 print "==========================="
 print "     generate dev file     "
 print "==========================="
-dev_ip = []     # [ [972 dim], [972 dim], ... ]   (39 + 69) * 9 = 972
+dev_ip = []     # [ [108*n dim], [108*n dim], ... ]   (39 + 69) * n
 dev_op = []     # [ 0~1942, 0~1942, ... ]
-dim_972 = []
+dim_n = []
 total = 0
 for instance in label_dev:
     print instance + ": " + str(len(label_dim[instance]))
     for i in range(len(label_dim[instance])):
-        for j in range(-4,5):
+        for j in range(-1 * int(n/2), int(n/2 + 1)):
             if i + j < 0:
                 idx = 0
             elif i + j >= len(label_dim[instance]):
                 idx = len(label_dim[instance]) - 1
             else:
                 idx = i + j
-            dim_972.extend(label_dim[instance][idx])
-        dim_972 = map(float, dim_972)
-        dev_ip.append(dim_972)
+            dim_n.extend(label_dim[instance][idx])
+        dim_n = map(float, dim_n)
+        dev_ip.append(dim_n)
         dev_op.append(label[instance][i])
         total += 1
-        dim_972 = []
+        dim_n = []
 print "total " + str(total) + " frames."
 
 # normalize dev_ip
@@ -139,5 +142,5 @@ dev_Tdata_op = np.asarray(dev_op, dtype=np.int32)
 # write to file
 print "write to file"
 dev_Tdata = (dev_Tdata_ip, dev_Tdata_op)
-with open("../../../training_data/expert/dev.xy", "wb") as f:
+with open("../../../training_data/" + out_dir + "/dev.xy", "wb") as f:
     cPickle.dump(dev_Tdata, f, 2)

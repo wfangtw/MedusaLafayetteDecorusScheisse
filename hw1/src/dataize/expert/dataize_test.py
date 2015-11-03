@@ -3,6 +3,10 @@ import numpy as np
 import cPickle
 import theano
 
+# required parameters
+n = 11
+out_dir = "expert11"
+
 ## statistic of male and female
 #label_male = {}
 #label_female = {}
@@ -62,24 +66,24 @@ print "     generate test file     "
 print "==========================="
 test_ip = []     # [ [972 dim], [972 dim], ... ]   (39 + 69) * 9 = 972
 test_op = []     # [ axxxx_yyyyy_z, axxxx_yyyyy_z, ... ]
-dim_972 = []
+dim_n = []
 total = 0
 for instance in label_dim:
     print instance + ": " + str(len(label_dim[instance]))
     for i in range(len(label_dim[instance])):
-        for j in range(-4,5):
+        for j in range(-1 * int(n/2), int(n/2 + 1)):
             if i + j < 0:
                 idx = 0
             elif i + j >= len(label_dim[instance]):
                 idx = len(label_dim[instance]) - 1
             else:
                 idx = i + j
-            dim_972.extend(label_dim[instance][idx])
-        dim_972 = map(float, dim_972)
-        test_ip.append(dim_972)
+            dim_n.extend(label_dim[instance][idx])
+        dim_n = map(float, dim_n)
+        test_ip.append(dim_n)
         test_op.append(instance + '_' + str(i + 1))
         total += 1
-        dim_972 = []
+        dim_n = []
 print "total " + str(total) + " frames."
 
 # normalize test_ip
@@ -96,5 +100,5 @@ test_Tdata_ip = np.asarray(test_ip.tolist(), dtype=theano.config.floatX).T
 # write to file
 print "write to file"
 test_Tdata = (test_Tdata_ip, test_op)
-with open("../../../training_data/expert/test.xy.2", "wb") as f:
+with open("../../../training_data/" + out_dir + "/test.xy.2", "wb") as f:
     cPickle.dump(test_Tdata, f, 2)
