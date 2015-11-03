@@ -231,7 +231,9 @@ while (epoch < EPOCHS) and training:
         with open(file_batch, "rb") as f:
             x_in = cPickle.load(f)
         # x_in = train_x[ minibatch_index * BATCH_SIZE : (minibatch_index + 1) * BATCH_SIZE ].T
+        # print("training: " + str(time.time()-start_time))
         batch_cost = train_model(x_in, minibatch_index)
+        # print("trained: " + str(time.time()-start_time))
         #batch_cost = train_model(minibatch_index)
         # iteration = (epoch - 1) * train_num + minibatch_index
         '''
