@@ -11,7 +11,7 @@ import cPickle
 import random
 import math
 import argparse
-from itertools import izip
+import signal
 
 import numpy as np
 import theano
@@ -109,7 +109,9 @@ def Update(params, gradients, square_gra):
     param_updates.extend([ (p, p - LEARNING_RATE * g /T.sqrt(s) ) for p, s, g in zip(params, square_gra, gradients) ])
     return param_updates
 
-
+def interrupt_handler(signal, frame):
+    print >> sys.stderr, dev_acc
+    sys.exit(0)
 
 ##################
 #   Load Data    #
@@ -188,7 +190,7 @@ train_model = theano.function(
 ###############
 
 print("===============================")
-print("            TRAINING")
+print("            TRAINING           ")
 print("===============================")
 
 train_num = int(math.ceil(train_y.shape[0].eval()/BATCH_SIZE))
@@ -206,22 +208,30 @@ print >> sys.stderr, "L1 regularization: %f" % L1_REG
 print >> sys.stderr, "L2 regularization: %f" % L2_REG
 print >> sys.stderr, "iters per epoch: %i" % train_num
 print >> sys.stderr, "validation size: %i" % val_y.shape[0].eval()
+
+# patience = 10000
+# patience_inc = 2
+# improvent_threshold = 0.995
+
+# best_val_loss = np.inf
+# best_iter = 0
+# test_score = 0
+
+first = -1.0
+second = -1.0
+third = -1.0
+
 minibatch_indices = range(0, train_num)
 epoch = 0
-
-patience = 10000
-patience_inc = 2
-improvent_threshold = 0.995
-
-best_val_loss = np.inf
-best_iter = 0
-test_score = 0
-
-training = True
-val_freq = min(train_num, patience)
 dev_acc = []
-#combo = 0
-while (epoch < EPOCHS) and training:
+
+# set keyboard interrupt handler
+signal.signal(signal.SIGINT, interrupt_handler)
+
+# training = True
+# val_freq = min(train_num, patience)
+# while (epoch < EPOCHS) and training:
+while (epoch < EPOCHS):
     epoch += 1
     print("===============================")
     print("EPOCH: " + str(epoch))
@@ -255,6 +265,18 @@ while (epoch < EPOCHS) and training:
             print >> sys.stderr, "Epoch #%i: nan error!!!" % epoch
             sys.exit()
     val_acc = 1 - np.mean([ dev_model(i) for i in xrange(0, val_num) ])
+    if val_acc > first:
+        print("!!!!!!!!!!FIRST!!!!!!!!!!")
+        first = val_acc
+        classifier.save_model("models/first_temp.mdl")
+    elif val_acc > second:
+        print("!!!!!!!!!!SECOND!!!!!!!!!!")
+        second = val_acc
+        classifier.save_model("models/second_temp.mdl")
+    elif val_acc > third:
+        print("!!!!!!!!!!THIRD!!!!!!!!!!")
+        third = val_acc
+        classifier.save_model("models/third_temp.mdl")
     dev_acc.append(val_acc)
     print("dev accuracy: " + str(dev_acc[-1]))
     print("Current time: " + str(time.time()-start_time))
@@ -262,8 +284,6 @@ while (epoch < EPOCHS) and training:
         classifier.save_model("models/20_temp.mdl")
     elif epoch == 40:
         classifier.save_model("models/40_temp.mdl")
-    elif epoch == 50:
-        classifier.save_model("models/50_temp.mdl")
     elif epoch == 60:
         classifier.save_model("models/60_temp.mdl")
     elif epoch == 80:
@@ -272,6 +292,8 @@ while (epoch < EPOCHS) and training:
         classifier.save_model("models/100_temp.mdl")
     elif epoch == 120:
         classifier.save_model("models/120_temp.mdl")
+    elif epoch == 140:
+        classifier.save_model("models/140_temp.mdl")
 #print(('Optimization complete. Best validation score of %f %% '
 #        'obtained at iteration %i') %
 #        (best_val_loss * 100., best_iter + 1))
