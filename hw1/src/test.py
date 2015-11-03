@@ -53,7 +53,7 @@ def LoadData(filename, load_type):
 start_time = time.time()
 print("===============================")
 print("Loading test data...")
-f_xy = args.test_in + ".xy.2"
+f_xy = args.test_in + ".xy"
 test_x, test_id = LoadData(f_xy,'test_xy')
 print "Total time: %f" % (time.time()-start_time)
 
@@ -105,7 +105,7 @@ print "Write probability"
 sn = 0
 start = 0
 for i in range(len(y)):
-    if int(test_id[i+1].rsplit('_', 1)[1]) == 1:
+    if i + 1 < len(y) and int(test_id[i+1].rsplit('_', 1)[1]) == 1:
         print "sn = " + str(sn)
         end = i + 1
         f_name = args.probability_out + "." + str(sn)
