@@ -38,8 +38,8 @@ parser.add_argument('--learning-rate', type=float, default=0.0001, metavar='<rat
 					help='learning rate of gradient descent')
 parser.add_argument('--learning-rate-decay', type=float, default=1., metavar='<decay>',
 					help='learning rate decay')
-parser.add_argument('--momentum', type=float, default=0., metavar='<momentum>',
-					help='momentum in gradient descent')
+#parser.add_argument('--momentum', type=float, default=0., metavar='<momentum>',
+#					help='momentum in gradient descent')
 parser.add_argument('--l1-reg', type=float, default=0.,
 					help='L1 regularization')
 parser.add_argument('--l2-reg', type=float, default=0.,
@@ -61,7 +61,7 @@ EPOCHS = args.max_epochs
 RMS_RATE = args.rmsprop_rate
 LEARNING_RATE = args.learning_rate
 LEARNING_RATE_DECAY = args.learning_rate_decay
-MOMENTUM = args.momentum
+#MOMENTUM = args.momentum
 L1_REG = args.l1_reg
 L2_REG = args.l2_reg
 SQUARE_GRADIENTS = 0
@@ -86,15 +86,40 @@ def LoadData(filename, load_type):
             return shared_x, test_id
         '''
         if load_type == 'train':
-            data_x, data_y, index_list = cPickle.load(f)
-            shared_x = np.asarray(data_x, dtype=theano.config.floatX)
-            shared_y = theano.shared(np.asarray(data_y, dtype='int32'), borrow=True)
-            return shared_x, shared_y, index_list
-        elif load_type == 'dev':
-            data_x, data_y, index_list = cPickle.load(f)
+            data_x, data_y = cPickle.load(f)
             shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX))
             shared_y = theano.shared(np.asarray(data_y, dtype='int32'), borrow=True)
-            return shared_x, shared_y, index_list
+            return shared_x, shared_y
+        elif load_type == 'dev':
+            data_x, data_y = cPickle.load(f)
+            shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX))
+            shared_y = theano.shared(np.asarray(data_y, dtype='int32'), borrow=True)
+            return shared_x, shared_y
+
+
+
+        '''
+        if load_type == 'train_x':
+            data_x, index_list = cPickle.load(f)
+            shared_x = theano.shared(data_x)
+            return shared_x, index_list
+
+
+        elif load_type == 'train_y':
+            data_y = cPickle.load(f)
+            shared_y = theano.shared(data_y)
+            return shared_y
+
+        elif load_type == 'dev_x':
+            data_x, index_list = cPickle.load(f)
+            shared_x = theano.shared(data_x)
+            return shared_x, index_list
+
+        elif load_type == 'dev_y':
+            data_y = cPickle.load(f)
+            shared_y = theano.shared(data_y)
+            return shared_y
+        '''
 
 '''
 #momentum
@@ -114,12 +139,12 @@ def Update(params, gradients, velocities):
 def Update(params, gradients, square_gra):
     global LEARNING_RATE
     global RMS_RATE
-    param_updates = [ (s, RMS_RATE * s + (1 - RMS_RATE) g*g) for g, s in zip(gradients, square_gra) ]
+    param_updates = [ (s, RMS_RATE * s + (1 - RMS_RATE) *g*g) for g, s in zip(gradients, square_gra) ]
     for i in range(0, len(gradients)):
 
-        if (gradients[i] + square_gra[i] == gradients[i])
+        if ((gradients[i] + square_gra[i]) == gradients[i]) :
             squre_gra[i] = gradients[i] * gradients[i]
-        else
+        else:
             square_gra[i] = RMS_RATE * square_gra[i] + (1 - RMS_RATE) * gradients[i] * gradients[i]
 
     param_updates.extend([ (p, p - LEARNING_RATE * g /T.sqrt(s) ) for p, s, g in zip(params, square_gra, gradients) ])
@@ -134,13 +159,23 @@ def Update(params, gradients, square_gra):
 # Load Dev data
 print("===============================")
 print("Loading dev data...")
-val_x, val_y, val_index = LoadData(args.dev_in,'dev')
+'''
+x_in = args.dev_in + '.x'
+y_in = args.dev_in + '.y'
+'''
+val_x, val_y = LoadData(args.dev_in,'dev_x')
+#val_y = LoadData(y_in, 'dev_y')
 print("Current time: %f" % (time.time()-start_time))
 
 # Load Training data
 print("===============================")
 print("Loading training data...")
-train_x, train_y, train_index = LoadData(args.train_in,'train')
+'''x_in = args.dev_in + '.x'
+y_in = args.dev_in + '.y'
+train_x, train_index = LoadData(x_in,'train_x')
+train_y = LoadData(y_in, 'train_y')'''
+
+train_x, train_y = LoadData(args.dev_in,'dev_x')
 print("Current time: %f" % (time.time()-start_time))
 
 print >> sys.stderr, "After loading: %f" % (time.time()-start_time)
@@ -213,7 +248,7 @@ print >> sys.stderr, "Max epochs: %i" % EPOCHS
 print >> sys.stderr, "RMS rate: %i" % RMS_RATE
 print >> sys.stderr, "Learning rate: %f" % LEARNING_RATE
 print >> sys.stderr, "Learning rate decay: %f" % LEARNING_RATE_DECAY
-print >> sys.stderr, "Momentum: %f" % MOMENTUM
+#print >> sys.stderr, "Momentum: %f" % MOMENTUM
 print >> sys.stderr, "L1 regularization: %f" % L1_REG
 print >> sys.stderr, "L2 regularization: %f" % L2_REG
 print >> sys.stderr, "iters per epoch: %i" % train_num
