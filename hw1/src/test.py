@@ -53,7 +53,7 @@ def LoadData(filename, load_type):
 start_time = time.time()
 print("===============================")
 print("Loading test data...")
-f_xy = args.test_in + ".xy"
+f_xy = args.test_in + ".xy.2"
 test_x, test_id = LoadData(f_xy,'test_xy')
 print "Total time: %f" % (time.time()-start_time)
 

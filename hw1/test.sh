@@ -13,10 +13,10 @@ prob_dir=probabilities
 model_dir=models
 log_dir=log
 
-n_in=351
+n_in=972
 n_out=1943
 n_layers=4
-n_neurons=1024
+n_neurons=2048
 #dropout=0.5
 
 mkdir -p $prob_dir/$3
