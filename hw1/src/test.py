@@ -53,7 +53,7 @@ def LoadData(filename, load_type):
 start_time = time.time()
 print("===============================")
 print("Loading test data...")
-f_xy = args.test_in + ".xy.2"
+f_xy = args.test_in + ".xy"
 test_x, test_id = LoadData(f_xy,'test_xy')
 print "Total time: %f" % (time.time()-start_time)
 
@@ -76,11 +76,19 @@ test_model = theano.function(
         }
 )
 # Create Phone Map
+f = open('data/phones/48_39.map','r')
+phone_map_48 = {}
+i = 0
+for l in f:
+    phone_map_48[l.strip(' \n').split('\t')[0]] = i     # phone_map_48[ aa ~ z ] = 0 ~ 47
+    i += 1
+f.close()
+
 f = open('data/phones/state_48_39.map','r')
 phone_map = {}
 i = 0
 for l in f:
-    phone_map[i] = l.strip(' \n').split('\t')[2]
+    phone_map[i] = phone_map_48[l.strip(' \n').split('\t')[1]]        # phone_map[ 0 ~ 1942 ] = 0 ~ 47
     i += 1
 f.close()
 
@@ -102,17 +110,32 @@ f.close()
 
 # Write probability
 print "Write probability"
-sn = 0
-start = 0
+
+y_prob_48 = []
+
 for i in range(len(y)):
-    if i + 1 < len(y) and int(test_id[i+1].rsplit('_', 1)[1]) == 1:
-        print "sn = " + str(sn)
-        end = i + 1
-        f_name = args.probability_out + "." + str(sn)
-        with open(f_name,'wb') as f:
-            cPickle.dump(y_prob[start:end], f, 2)
-        sn += 1
-        start = i + 1
+    prob_48 = np.zeros(48)
+    for j in range(1943):
+        prob_48[phone_map_48[j]] += y_prob[i][j]
+    print(np.sum(prob_48))
+    y_prob_48.append(prob_48)
+y_prob_48 = np.asarray(y_prob_48.tolist(), dtype=theano.config.floatX)
+
+with open(args.probability_out,'wb') as f:
+    cPickle.dump(y_prob_48, f, 2)
+
+
+# sn = 0
+# start = 0
+# for i in range(len(y)):
+    # if i + 1 < len(y) and int(test_id[i+1].rsplit('_', 1)[1]) == 1:
+        # print "sn = " + str(sn)
+        # end = i + 1
+        # f_name = args.probability_out + "." + str(sn)
+        # with open(f_name,'wb') as f:
+            # cPickle.dump(y_prob[start:end], f, 2)
+        # sn += 1
+        # start = i + 1
 
 print("===============================")
 print("Total time: " + str(time.time()-start_time))
