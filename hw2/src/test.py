@@ -17,7 +17,7 @@ import numpy as np
 import theano
 import theano.tensor as T
 
-from nn.dnn import MLP
+from nn.dnn import RNN
 
 parser = argparse.ArgumentParser(prog='test.py', description='Test DNN for Phone Classification.')
 parser.add_argument('--input-dim', type=int, required=True, metavar='<nIn>',
@@ -55,7 +55,7 @@ print "Total time: %f" % (time.time()-start_time)
 
 x = T.matrix(dtype=theano.config.floatX)
 
-classifier = MLP(
+classifier = RNN(
         input=x,
         n_in=INPUT_DIM,
         n_hidden=NEURONS_PER_LAYER,
@@ -68,7 +68,8 @@ test_model = theano.function(
         inputs=[],
         outputs=classifier.y_pred,
         givens={
-            x: test_x.T
+
+
         }
 )
 # Create Phone Map

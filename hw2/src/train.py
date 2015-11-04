@@ -32,6 +32,8 @@ parser.add_argument('--max-epochs', type=int, required=True, metavar='<nEpochs>'
 					help='number of maximum epochs')
 #parser.add_argument('--batch-size', type=int, default=1, metavar='<size>',
 #					help='size of minibatch')
+parser.add_argument('--rmsprop-rate', type=float, default=0.1, metavar='<rmsrate>',
+					help='Eastern misterious power. ')
 parser.add_argument('--learning-rate', type=float, default=0.0001, metavar='<rate>',
 					help='learning rate of gradient descent')
 parser.add_argument('--learning-rate-decay', type=float, default=1., metavar='<decay>',
@@ -56,6 +58,7 @@ HIDDEN_LAYERS = args.hidden_layers
 NEURONS_PER_LAYER = args.neurons_per_layer
 EPOCHS = args.max_epochs
 #BATCH_SIZE = args.batch_size
+RMS_RATE = args.rmsprop_rate
 LEARNING_RATE = args.learning_rate
 LEARNING_RATE_DECAY = args.learning_rate_decay
 MOMENTUM = args.momentum
@@ -83,15 +86,15 @@ def LoadData(filename, load_type):
             return shared_x, test_id
         '''
         if load_type == 'train':
-            data_x, data_y = cPickle.load(f)
+            data_x, data_y, index_list = cPickle.load(f)
             shared_x = np.asarray(data_x, dtype=theano.config.floatX)
             shared_y = theano.shared(np.asarray(data_y, dtype='int32'), borrow=True)
-            return shared_x, shared_y
+            return shared_x, shared_y, index_list
         elif load_type == 'dev':
-            data_x, data_y = cPickle.load(f)
+            data_x, data_y, index_list = cPickle.load(f)
             shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX))
             shared_y = theano.shared(np.asarray(data_y, dtype='int32'), borrow=True)
-            return shared_x, shared_y
+            return shared_x, shared_y, index_list
 
 '''
 #momentum
@@ -110,9 +113,15 @@ def Update(params, gradients, velocities):
 #adagrad
 def Update(params, gradients, square_gra):
     global LEARNING_RATE
-    param_updates = [ (s, s + g*g) for g, s in zip(gradients, square_gra) ]
+    global RMS_RATE
+    param_updates = [ (s, RMS_RATE * s + (1 - RMS_RATE) g*g) for g, s in zip(gradients, square_gra) ]
     for i in range(0, len(gradients)):
-        square_gra[i] = square_gra[i] + gradients[i] * gradients[i]
+
+        if (gradients[i] + square_gra[i] == gradients[i])
+            squre_gra[i] = gradients[i] * gradients[i]
+        else
+            square_gra[i] = RMS_RATE * square_gra[i] + (1 - RMS_RATE) * gradients[i] * gradients[i]
+
     param_updates.extend([ (p, p - LEARNING_RATE * g /T.sqrt(s) ) for p, s, g in zip(params, square_gra, gradients) ])
     return param_updates
 
@@ -125,13 +134,13 @@ def Update(params, gradients, square_gra):
 # Load Dev data
 print("===============================")
 print("Loading dev data...")
-val_x, val_y = LoadData(args.dev_in,'dev')
+val_x, val_y, val_index = LoadData(args.dev_in,'dev')
 print("Current time: %f" % (time.time()-start_time))
 
 # Load Training data
 print("===============================")
 print("Loading training data...")
-train_x, train_y = LoadData(args.train_in,'train')
+train_x, train_y, train_index = LoadData(args.train_in,'train')
 print("Current time: %f" % (time.time()-start_time))
 
 print >> sys.stderr, "After loading: %f" % (time.time()-start_time)
@@ -146,7 +155,7 @@ x = T.matrix(dtype=theano.config.floatX)
 y = T.ivector()
 
 # construct MLP class
-classifier = MLP(
+classifier = RNN(
         input=x,
         n_in=INPUT_DIM,
         n_hidden=NEURONS_PER_LAYER,
@@ -166,8 +175,8 @@ dev_model = theano.function(
         inputs=[index],
         outputs=classifier.errors(y),
         givens={
-            x: val_x[ index * BATCH_SIZE : (index + 1) * BATCH_SIZE ].T,
-            y: val_y[ index * BATCH_SIZE : (index + 1) * BATCH_SIZE ].T,
+            x: val_x[ val_index[index] : val_index[index+1] ],
+            y: val_y[ val_index[index] : val_index[index+1] ],
         }
 )
 
@@ -177,13 +186,12 @@ dparams = [ T.grad(cost, param) for param in classifier.params ]
 
 # compile "train model" function
 train_model = theano.function(
-        #inputs=[index],
-        inputs=[x, index],
+        inputs=[index],
         outputs=cost,
         updates=Update(classifier.params, dparams, classifier.velo),
         givens={
-            #x: train_x[ index * BATCH_SIZE : (index + 1) * BATCH_SIZE ].T,
-            y: train_y[ index * BATCH_SIZE : (index + 1) * BATCH_SIZE ].T
+            x: train_x[ train_index[index]  : train_index[index+1] ],
+            y: train_y[ train_index[index]: train_index[index+1] ]
         }
 )
 
@@ -195,14 +203,14 @@ print("===============================")
 print("            TRAINING")
 print("===============================")
 
-train_num = int(math.ceil(train_y.shape[0].eval()/BATCH_SIZE))
-val_num = int(math.ceil(val_y.shape[0].eval()/BATCH_SIZE))
+train_num = int(math.ceil(train_index.shape[0].eval()))
+val_num = int(math.ceil(val_index.shape[0].eval()))
 print >> sys.stderr, "Input dimension: %i" % INPUT_DIM
 print >> sys.stderr, "Output dimension: %i" % OUTPUT_DIM
 print >> sys.stderr, "# of layers: %i" % HIDDEN_LAYERS
 print >> sys.stderr, "# of neurons per layer: %i" % NEURONS_PER_LAYER
 print >> sys.stderr, "Max epochs: %i" % EPOCHS
-print >> sys.stderr, "Batch size: %i" % BATCH_SIZE
+print >> sys.stderr, "RMS rate: %i" % RMS_RATE
 print >> sys.stderr, "Learning rate: %f" % LEARNING_RATE
 print >> sys.stderr, "Learning rate decay: %f" % LEARNING_RATE_DECAY
 print >> sys.stderr, "Momentum: %f" % MOMENTUM
@@ -210,14 +218,15 @@ print >> sys.stderr, "L1 regularization: %f" % L1_REG
 print >> sys.stderr, "L2 regularization: %f" % L2_REG
 print >> sys.stderr, "iters per epoch: %i" % train_num
 print >> sys.stderr, "validation size: %i" % val_y.shape[0].eval()
-minibatch_indices = range(0, train_num)
+#minibatch_indices = range(0, train_num)
+training_indices = range(0, train_num)
 epoch = 0
 
 patience = 10000
 patience_inc = 2
 improvent_threshold = 0.995
 
-best_val_loss = np.inf
+
 best_iter = 0
 test_score = 0
 
@@ -229,12 +238,12 @@ while (epoch < EPOCHS) and training:
     epoch += 1
     print("===============================")
     print("EPOCH: " + str(epoch))
-    random.shuffle(minibatch_indices)
-    for minibatch_index in minibatch_indices:
-        x_in = train_x[ minibatch_index * BATCH_SIZE : (minibatch_index + 1) * BATCH_SIZE ].T
-        batch_cost = train_model(x_in, minibatch_index)
+    random.shuffle(training_indices)
+    for index in training_indices:
+        #x_in = train_x[ minibatch_index * BATCH_SIZE : (minibatch_index + 1) * BATCH_SIZE ].T
+        sequence_cost = train_model(x_in, minibatch_index)
         #batch_cost = train_model(minibatch_index)
-        iteration = (epoch - 1) * train_num + minibatch_index
+        #iteration = (epoch - 1) * train_num + minibatch_index
         '''
         if (iteration + 1) % val_freq == 0:
             val_losses = [ dev_model(i) for i in xrange(0, train_num) ]

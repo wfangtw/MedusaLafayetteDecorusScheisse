@@ -12,10 +12,10 @@ pred_dir=predictions
 model_dir=models
 log_dir=log
 
-n_in=972
+n_in=1188
 n_out=1943
 n_layers=4
-n_neurons=4096
+n_neurons=1024
 epochs=150
 batch_size=256
 learning_rate=0.001
