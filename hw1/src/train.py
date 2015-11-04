@@ -110,6 +110,7 @@ def Update(params, gradients, square_gra):
     return param_updates
 
 def interrupt_handler(signal, frame):
+    print >> sys.stderr, str(signal)
     print >> sys.stderr, dev_acc
     sys.exit(0)
 
@@ -227,6 +228,8 @@ dev_acc = []
 
 # set keyboard interrupt handler
 signal.signal(signal.SIGINT, interrupt_handler)
+# set shutdown handler
+signal.signal(signal.SIGTERM, interrupt_handler)
 
 # training = True
 # val_freq = min(train_num, patience)
@@ -280,20 +283,20 @@ while (epoch < EPOCHS):
     dev_acc.append(val_acc)
     print("dev accuracy: " + str(dev_acc[-1]))
     print("Current time: " + str(time.time()-start_time))
-    if epoch == 20:
-        classifier.save_model("models/20_temp.mdl")
-    elif epoch == 40:
-        classifier.save_model("models/40_temp.mdl")
-    elif epoch == 60:
-        classifier.save_model("models/60_temp.mdl")
-    elif epoch == 80:
-        classifier.save_model("models/80_temp.mdl")
-    elif epoch == 100:
-        classifier.save_model("models/100_temp.mdl")
-    elif epoch == 120:
-        classifier.save_model("models/120_temp.mdl")
-    elif epoch == 140:
-        classifier.save_model("models/140_temp.mdl")
+    # if epoch == 20:
+        # classifier.save_model("models/20_temp.mdl")
+    # elif epoch == 40:
+        # classifier.save_model("models/40_temp.mdl")
+    # elif epoch == 60:
+        # classifier.save_model("models/60_temp.mdl")
+    # elif epoch == 80:
+        # classifier.save_model("models/80_temp.mdl")
+    # elif epoch == 100:
+        # classifier.save_model("models/100_temp.mdl")
+    # elif epoch == 120:
+        # classifier.save_model("models/120_temp.mdl")
+    # elif epoch == 140:
+        # classifier.save_model("models/140_temp.mdl")
 #print(('Optimization complete. Best validation score of %f %% '
 #        'obtained at iteration %i') %
 #        (best_val_loss * 100., best_iter + 1))
