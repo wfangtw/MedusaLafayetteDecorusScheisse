@@ -10,8 +10,7 @@ fi
 SCRIPT=~/Dropbox-Uploader/dropbox_uploader.sh
 
 # directory variable
-#DIRs=(predictions probabilities models log)
-DIRs=(test)
+DIRs=(predictions probabilities models log)
 
 if [ $1 == "upload" -o $1 == "download" ]; then
     for dir in ${DIRs[@]}; do
