@@ -291,6 +291,7 @@ while (epoch < EPOCHS):
     now_time = time.time()
     print("dev accuracy: " + str(dev_acc[-1]))
     print("Current time: " + str(now_time-start_time))
+    classifier.save_model("models/temp.mdl")
     # if epoch == 20:
         # classifier.save_model("models/20_temp.mdl")
     # elif epoch == 40:

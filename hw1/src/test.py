@@ -77,18 +77,21 @@ test_model = theano.function(
 )
 # Create Phone Map
 f = open('data/phones/48_39.map','r')
-phone_map_48 = {}
+phone_map_48s_48i = {}      # phone_map_48s_48i[ aa ~ z ] = 0 ~ 47
 i = 0
 for l in f:
-    phone_map_48[l.strip(' \n').split('\t')[0]] = i     # phone_map_48[ aa ~ z ] = 0 ~ 47
+    phone_map_48s_48i[l.strip(' \n').split('\t')[0]] = i
     i += 1
 f.close()
 
 f = open('data/phones/state_48_39.map','r')
-phone_map = {}
+phone_map_1943i_48i = {}        # phone_map_1943i_48i[ 0 ~ 1942 ] = 0 ~ 47
+phone_map_1943i_48s = {}        # phone_map_1943i_48s[ 0 ~ 1942 ] = aa ~ z
 i = 0
 for l in f:
-    phone_map[i] = phone_map_48[l.strip(' \n').split('\t')[1]]        # phone_map[ 0 ~ 1942 ] = 0 ~ 47
+    mapping = l.strip(' \n').split('\t')        # mapping = 0 ~ 1942, aa ~ z, aa ~ z
+    phone_map_1943i_48i[i] = phone_map_48s_48i[mapping[1]]
+    phone_map_1943i_48s[i] = mapping[1]
     i += 1
 f.close()
 
@@ -100,30 +103,37 @@ y = y.tolist()
 y_prob = y_prob.tolist()
 print("Current time: %f" % (time.time()-start_time))
 
+'''
 # Write prediction
 print "Write prediction"
 f = open(args.prediction_out,'w')
 f.write('Id,Prediction\n')
 for i in range(len(y)):
-    f.write(test_id[i] + ',' + phone_map[y[i]] + '\n')
+    f.write(test_id[i] + ',' + phone_map_1943i_48s[y[i]] + '\n')
 f.close()
+'''
 
 # Write probability
 print "Write probability"
 
 y_prob_48 = []
+y_prob_idx = []
 
 for i in range(len(y)):
     prob_48 = np.zeros(48)
+    if int(test_id[i].rsplit('_', 1)[1]) == 1:
+        print i
+        y_prob_idx.append(i)
     for j in range(1943):
-        prob_48[phone_map_48[j]] += y_prob[i][j]
-    print(np.sum(prob_48))
-    y_prob_48.append(prob_48)
-y_prob_48 = np.asarray(y_prob_48.tolist(), dtype=theano.config.floatX)
+        prob_48[phone_map_1943i_48i[j]] += y_prob[i][j]
+    if np.sum(prob_48) > 1.00001 or np.sum(prob_48) < 0.99999:
+        print y_prob[i]
+    y_prob_48.append(prob_48.tolist())
+y_prob_48 = np.asarray(y_prob_48, dtype=theano.config.floatX)
 
 with open(args.probability_out,'wb') as f:
     cPickle.dump(y_prob_48, f, 2)
-
+    cPickle.dump(y_prob_idx, f, 2)
 
 # sn = 0
 # start = 0
