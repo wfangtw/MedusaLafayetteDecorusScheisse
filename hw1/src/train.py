@@ -109,9 +109,15 @@ def Update(params, gradients, square_gra):
     param_updates.extend([ (p, p - LEARNING_RATE * g /T.sqrt(s) ) for p, s, g in zip(params, square_gra, gradients) ])
     return param_updates
 
+def print_dev_acc():
+    print "===============dev_acc==============="
+    for acc in dev_acc:
+        print >> sys.stderr, acc
+
 def interrupt_handler(signal, frame):
     print >> sys.stderr, str(signal)
-    print >> sys.stderr, dev_acc
+    print >> sys.stderr, "Total time till last epoch: %f" % (now_time-start_time)
+    print_dev_acc()
     sys.exit(0)
 
 ##################
@@ -225,6 +231,7 @@ third = -1.0
 minibatch_indices = range(0, train_num)
 epoch = 0
 dev_acc = []
+now_time = time.time()
 
 # set keyboard interrupt handler
 signal.signal(signal.SIGINT, interrupt_handler)
@@ -271,18 +278,19 @@ while (epoch < EPOCHS):
     if val_acc > first:
         print("!!!!!!!!!!FIRST!!!!!!!!!!")
         first = val_acc
-        classifier.save_model("models/first_temp.mdl")
+        classifier.save_model(args.model_out)
     elif val_acc > second:
         print("!!!!!!!!!!SECOND!!!!!!!!!!")
         second = val_acc
-        classifier.save_model("models/second_temp.mdl")
+        classifier.save_model(args.model_out + ".2")
     elif val_acc > third:
         print("!!!!!!!!!!THIRD!!!!!!!!!!")
         third = val_acc
-        classifier.save_model("models/third_temp.mdl")
+        classifier.save_model(args.model_out + ".3")
     dev_acc.append(val_acc)
+    now_time = time.time()
     print("dev accuracy: " + str(dev_acc[-1]))
-    print("Current time: " + str(time.time()-start_time))
+    print("Current time: " + str(now_time-start_time))
     # if epoch == 20:
         # classifier.save_model("models/20_temp.mdl")
     # elif epoch == 40:
@@ -301,10 +309,9 @@ while (epoch < EPOCHS):
 #        'obtained at iteration %i') %
 #        (best_val_loss * 100., best_iter + 1))
 print("===============================")
-print >> sys.stderr, dev_acc
-classifier.save_model(args.model_out)
+print >> sys.stderr, "Total time: %f" % (time.time()-start_time)
+print_dev_acc()
 
 print("===============================")
 print("Total time: " + str(time.time()-start_time))
-print >> sys.stderr, "Total time: %f" % (time.time()-start_time)
 print("===============================")
