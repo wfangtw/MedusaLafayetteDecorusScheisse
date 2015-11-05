@@ -277,10 +277,13 @@ while (epoch < EPOCHS):
     val_acc = 1 - np.mean([ dev_model(i) for i in xrange(0, val_num) ])
     if val_acc > first:
         print("!!!!!!!!!!FIRST!!!!!!!!!!")
+        third = second
+        second = first
         first = val_acc
         classifier.save_model(args.model_out)
     elif val_acc > second:
         print("!!!!!!!!!!SECOND!!!!!!!!!!")
+        third = second
         second = val_acc
         classifier.save_model(args.model_out + ".2")
     elif val_acc > third:
