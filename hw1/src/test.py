@@ -103,7 +103,6 @@ y = y.tolist()
 y_prob = y_prob.tolist()
 print("Current time: %f" % (time.time()-start_time))
 
-'''
 # Write prediction
 print "Write prediction"
 f = open(args.prediction_out,'w')
@@ -111,7 +110,6 @@ f.write('Id,Prediction\n')
 for i in range(len(y)):
     f.write(test_id[i] + ',' + phone_map_1943i_48s[y[i]] + '\n')
 f.close()
-'''
 
 # Write probability
 print "Write probability"

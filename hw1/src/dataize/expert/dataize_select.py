@@ -52,6 +52,7 @@ print "label_dev [(30 + 16) * 8]: " + str(len(label_dev))
 
 # shuffle label_train
 print "shuffle label_train"
+label_train_unshuffled = label_train
 random.shuffle(label_train)
 
 #print "male: " + str(len(label_male))
@@ -59,7 +60,8 @@ random.shuffle(label_train)
 #for key, value in label_head.iteritems():
 #    print key + ": " + str(len(value))             # every data has 8 sentences
 
-with open("label.dev", "w") as f:
-    cPickle.dump(label_dev, f)
-    cPickle.dump(label, f)
-    cPickle.dump(label_train, f)
+with open("label.dev.new", "wb") as f:
+    cPickle.dump(label_dev, f, 2)
+    cPickle.dump(label, f, 2)
+    cPickle.dump(label_train_unshuffled, f, 2)
+    cPickle.dump(label_train, f, 2)

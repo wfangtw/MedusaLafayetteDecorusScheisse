@@ -4,16 +4,17 @@ import cPickle
 import theano
 
 # required parameters
-n = 11
+n = 9
 batch_size = 256
-out_dir = "expert11"
+out_dir = "expert9s"
 
 label_dim = {}        # label_dim[axxxx_yyyy] = [ [108 dim], [108dim], ...]
 
 # load label_dev & label
-with open("label.dev", "r") as f:
+with open("label.dev.new", "rb") as f:
     label_dev = cPickle.load(f)
     label = cPickle.load(f)
+    label_train_unshuffled = cPickle.load(f)
     label_train = cPickle.load(f)
 
 # parse mfcc/train.ark & fbank/train.ark
@@ -45,12 +46,19 @@ print "     generate train batch files     "
 print "===================================="
 train_ip = []   # [ [108*n dim], [108*n dim], ... ]   (39 + 69) * n
 train_op = []   # [ 0~1942, 0~1942, ... ]
+train_index = []
 dim_n = []
 sn = 0
 i = 1
-for frame in label_train:
+# for frame in label_train:
+for frame in label_train_unshuffled:
 
     frame_name, frame_index = frame.rsplit('_', 1)      # axxxx_yyyyy, z
+
+    # generate train_index
+    if int(frame_index) == 1:
+        train_index.append(i - 1)
+
     frame_index = int(frame_index) - 1
     for j in range(-1 * int(n/2), int(n/2 + 1)):
         if frame_index + j < 0:
@@ -80,7 +88,8 @@ for frame in label_train:
 
         # write input to file
         print "write input to file"
-        f_name = "../../../training_data/" + out_dir + "/train.x." + str(sn)
+        # f_name = "../../../training_data/" + out_dir + "/train.x." + str(sn)
+        f_name = "../../../training_data/" + out_dir + "/train.unshuffled.x." + str(sn)
         with open(f_name, "wb") as f:
             cPickle.dump(train_Tdata_ip, f, 2)
 
@@ -95,8 +104,11 @@ train_Tdata_op = np.asarray(train_op, dtype=np.int32)
 
 # write output to file
 print "write output to file"
-with open("../../../training_data/" + out_dir + "/train.y", "wb") as f:
+# with open("../../../training_data/" + out_dir + "/train.y", "wb") as f:
+with open("../../../training_data/" + out_dir + "/train.unshuffled.y", "wb") as f:
     cPickle.dump(train_Tdata_op, f, 2)
+with open("../../../training_data/" + out_dir + "/train.idx", "wb") as f:
+    cPickle.dump(train_index, f, 2)
 
 print "total " + str(i-1) + " frames."
 print "last file " + str(i - (sn - 1) * batch_size - 1) + " frames."
@@ -107,10 +119,15 @@ print "     generate dev file     "
 print "==========================="
 dev_ip = []     # [ [108*n dim], [108*n dim], ... ]   (39 + 69) * n
 dev_op = []     # [ 0~1942, 0~1942, ... ]
+dev_index = []
 dim_n = []
 total = 0
 for instance in label_dev:
-    print instance + ": " + str(len(label_dim[instance]))
+    print instance + ": " + str(index)
+
+    # generate dev_index
+    dev_index.append(total)
+
     for i in range(len(label_dim[instance])):
         for j in range(-1 * int(n/2), int(n/2 + 1)):
             if i + j < 0:
@@ -144,3 +161,5 @@ print "write to file"
 dev_Tdata = (dev_Tdata_ip, dev_Tdata_op)
 with open("../../../training_data/" + out_dir + "/dev.xy", "wb") as f:
     cPickle.dump(dev_Tdata, f, 2)
+with open("../../../training_data/" + out_dir + "/dev.idx", "wb") as f:
+    cPickle.dump(dev_index, f, 2)

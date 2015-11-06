@@ -19,8 +19,6 @@ n_layers=4
 n_neurons=1024
 #dropout=0.5
 
-#mkdir -p $prob_dir/$3
-
 python2 -u $src_dir/test.py --input-dim $n_in --output-dim $n_out \
 	--hidden-layers $n_layers --neurons-per-layer $n_neurons \
     $data_dir/test \
