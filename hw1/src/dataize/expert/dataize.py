@@ -4,9 +4,9 @@ import cPickle
 import theano
 
 # required parameters
-n = 9
+n = 11
 batch_size = 256
-out_dir = "expert9s"
+out_dir = "expert11s"
 
 label_dim = {}        # label_dim[axxxx_yyyy] = [ [108 dim], [108dim], ...]
 
@@ -21,8 +21,8 @@ with open("label.dev.new", "rb") as f:
 print "======================================"
 print "     parse mfcc & fbank train.ark     "
 print "======================================"
-f_mfcc = open("../../../data/mfcc/train.ark", "r")
-f_fbank = open("../../../data/fbank/train.ark", "r")
+f_mfcc = open("/home/ray1007/MLDS/MLDS_hw1/Data/mfcc/train.ark", "r")
+f_fbank = open("/home/ray1007/MLDS/MLDS_hw1/Data/fbank/train.ark", "r")
 
 for mfcc_line, fbank_line in zip(f_mfcc, f_fbank):
     m_l = mfcc_line.strip(' \n').split(' ')
@@ -40,6 +40,7 @@ for mfcc_line, fbank_line in zip(f_mfcc, f_fbank):
 f_mfcc.close()
 f_fbank.close()
 
+'''
 # generate train batch files
 print "===================================="
 print "     generate train batch files     "
@@ -112,6 +113,7 @@ with open("../../../training_data/" + out_dir + "/train.idx", "wb") as f:
 
 print "total " + str(i-1) + " frames."
 print "last file " + str(i - (sn - 1) * batch_size - 1) + " frames."
+'''
 
 # generate dev file
 print "==========================="
@@ -123,7 +125,7 @@ dev_index = []
 dim_n = []
 total = 0
 for instance in label_dev:
-    print instance + ": " + str(index)
+    print instance + ": " + str(total)
 
     # generate dev_index
     dev_index.append(total)
@@ -153,7 +155,7 @@ dev_ip = (dev_ip - dev_mean) / dev_std
 
 # make it theano & numpy
 print "make it theano & numpy"
-dev_Tdata_ip = np.asarray(dev_ip.tolist(), dtype=theano.config.floatX)
+dev_Tdata_ip = np.asarray(dev_ip.tolist(), dtype=theano.config.floatX).T
 dev_Tdata_op = np.asarray(dev_op, dtype=np.int32)
 
 # write to file

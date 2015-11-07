@@ -19,7 +19,7 @@ import theano.tensor as T
 
 from nn.dnn import MLP
 
-parser = argparse.ArgumentParser(prog='test.py', description='Test DNN for Phone Classification.')
+parser = argparse.ArgumentParser(prog='prob.py', description='Get Prob from Test DNN for Phone Classification.')
 parser.add_argument('--input-dim', type=int, required=True, metavar='<nIn>',
 					help='input dimension of network')
 parser.add_argument('--output-dim', type=int, required=True, metavar='<nOut>',
@@ -28,6 +28,8 @@ parser.add_argument('--hidden-layers', type=int, required=True, metavar='<nLayer
 					help='number of hidden layers')
 parser.add_argument('--neurons-per-layer', type=int, required=True, metavar='<nNeurons>',
 					help='number of neurons in a hidden layer')
+parser.add_argument('--batch-size', type=int, default=1, metavar='<size>',
+					help='size of minibatch')
 parser.add_argument('train_in', type=str, metavar='<test-in>',
 					help='testing data file name')
 parser.add_argument('dev_in', type=str, metavar='<test-in>',
@@ -42,6 +44,7 @@ INPUT_DIM = args.input_dim
 OUTPUT_DIM = args.output_dim
 HIDDEN_LAYERS = args.hidden_layers
 NEURONS_PER_LAYER = args.neurons_per_layer
+BATCH_SIZE = args.batch_size
 
 start_time = time.time()
 
@@ -49,7 +52,7 @@ start_time = time.time()
 #   Create Phone Map   #
 ########################
 
-f = open('data/phones/48_39.map','r')
+f = open('/home/ray1007/MLDS/MLDS_hw1/Data/phones/48_39.map','r')
 phone_map_48s_48i = {}      # phone_map_48s_48i[ aa ~ z ] = 0 ~ 47
 i = 0
 for l in f:
@@ -57,7 +60,7 @@ for l in f:
     i += 1
 f.close()
 
-f = open('data/phones/state_48_39.map','r')
+f = open('/home/ray1007/MLDS/MLDS_hw1/Data/phones/state_48_39.map','r')
 phone_map_1943i_48i = {}        # phone_map_1943i_48i[ 0 ~ 1942 ] = 0 ~ 47
 phone_map_1943i_48s = {}        # phone_map_1943i_48s[ 0 ~ 1942 ] = aa ~ z
 i = 0
@@ -88,6 +91,7 @@ test_model = theano.function(
         outputs=(classifier.output)
 )
 
+'''
 #####################
 #   Probing Train   #
 #####################
@@ -98,13 +102,14 @@ with open(f_y, "rb") as f:
 f_idx = args.train_in + ".idx"
 with open(f_idx, "rb") as f:
     y_train_idx = cPickle.load(f)
-train_num = int(math.ceil(y_out.shape[0].eval()/BATCH_SIZE))
+train_num = int(math.ceil(1.0 * len(y_out) / BATCH_SIZE))
 
 y_prob_48 = []
 
 print("===============================")
 print("Start Probing Train")
 for idx in range(train_num):
+    print idx
     file_batch = args.train_in + ".unshuffled.x." + str(idx)
     with open(file_batch, "rb") as f:
         x_in = cPickle.load(f)
@@ -112,7 +117,7 @@ for idx in range(train_num):
     y_prob = y_prob.tolist()
 
     # map prob from dim 1943 to dim 48
-    for i in range(len(x_in)):
+    for i in range(len(x_in[0])):
         prob_48 = np.zeros(48)
         for j in range(1943):
             prob_48[phone_map_1943i_48i[j]] += y_prob[i][j]
@@ -137,6 +142,7 @@ with open(f_train_prob,'wb') as f:
     cPickle.dump(y_train_idx, f, 2)
 
 print("Current time: %f" % (time.time()-start_time))
+'''
 
 ###################
 #   Probing Dev   #
@@ -157,7 +163,7 @@ print("Start Probing Dev")
 y_prob = test_model(x_in)
 y_prob = y_prob.tolist()
 
-for i in range(len(x_in)):
+for i in range(len(x_in[0])):
     prob_48 = np.zeros(48)
     for j in range(1943):
         prob_48[phone_map_1943i_48i[j]] += y_prob[i][j]
