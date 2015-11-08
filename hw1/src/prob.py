@@ -52,7 +52,7 @@ start_time = time.time()
 #   Create Phone Map   #
 ########################
 
-f = open('/home/ray1007/MLDS/MLDS_hw1/Data/phones/48_39.map','r')
+f = open('data/phones/48_39.map','r')
 phone_map_48s_48i = {}      # phone_map_48s_48i[ aa ~ z ] = 0 ~ 47
 i = 0
 for l in f:
@@ -60,7 +60,7 @@ for l in f:
     i += 1
 f.close()
 
-f = open('/home/ray1007/MLDS/MLDS_hw1/Data/phones/state_48_39.map','r')
+f = open('data/phones/state_48_39.map','r')
 phone_map_1943i_48i = {}        # phone_map_1943i_48i[ 0 ~ 1942 ] = 0 ~ 47
 phone_map_1943i_48s = {}        # phone_map_1943i_48s[ 0 ~ 1942 ] = aa ~ z
 i = 0
@@ -91,7 +91,6 @@ test_model = theano.function(
         outputs=(classifier.output)
 )
 
-'''
 #####################
 #   Probing Train   #
 #####################
@@ -114,7 +113,6 @@ for idx in range(train_num):
     with open(file_batch, "rb") as f:
         x_in = cPickle.load(f)
     y_prob = test_model(x_in)
-    y_prob = y_prob.tolist()
 
     # map prob from dim 1943 to dim 48
     for i in range(len(x_in[0])):
@@ -142,8 +140,8 @@ with open(f_train_prob,'wb') as f:
     cPickle.dump(y_train_idx, f, 2)
 
 print("Current time: %f" % (time.time()-start_time))
-'''
 
+'''
 ###################
 #   Probing Dev   #
 ###################
@@ -161,9 +159,9 @@ print("===============================")
 print("Start Probing Dev")
 
 y_prob = test_model(x_in)
-y_prob = y_prob.tolist()
 
 for i in range(len(x_in[0])):
+    print i
     prob_48 = np.zeros(48)
     for j in range(1943):
         prob_48[phone_map_1943i_48i[j]] += y_prob[i][j]
@@ -190,3 +188,4 @@ print("===============================")
 print("Total time: " + str(time.time()-start_time))
 print >> sys.stderr, "Total time: %f" % (time.time()-start_time)
 print("===============================")
+'''
