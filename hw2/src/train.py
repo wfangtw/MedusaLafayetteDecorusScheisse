@@ -78,7 +78,6 @@ def LoadData(filename, load_type):
             data_x = cPickle.load(f)
             data_y = cPickle.load(f)
             data_index = cPickle.load(f)
-            # print data_index[0]
 
             data_index = np.asarray(data_index, dtype=np.int32)
             max_length = 0
@@ -93,7 +92,6 @@ def LoadData(filename, load_type):
             data_x = cPickle.load(f)
             data_y = cPickle.load(f)
             data_index = cPickle.load(f)
-            print data_index
 
             data_index = np.asarray(data_index, dtype=np.int32)
             shared_x = theano.shared(data_x)
@@ -182,13 +180,11 @@ dev_model = theano.function(
 dparams = [ T.grad(cost, param) for param in classifier.params ]
 print "gradient..."
 # compile "train model" function
-'''
 train_model = theano.function(
         inputs=[x,y,mask],
         outputs=[cost,debug2,dparams[0],dparams[1],dparams[2]],
         updates=Update(classifier.params, dparams, classifier.velo),
 )
-'''
 print "train_model built...@@...zzz..."
 
 ###############
@@ -236,14 +232,10 @@ while (epoch < EPOCHS) and training:
         for idx in list_in:
             end = train_index[idx+1]
             start = train_index[idx]
-            print "aaaaaaaaaa"
-            print train_x[start:end].shape
-            print np.zeros((max_length - (end - start), INPUT_DIM)).shape
-            input_batch_x.append(np.append(train_x[start:end], np.zeros((max_length - (end - start), INPUT_DIM)).astype(dtype = theano.config.floatX)))
-            input_batch_y.append(np.append(train_y[start:end], np.zeros((max_length - (end - start), INPUT_DIM))))
+            input_batch_x.append(np.concatenate((train_x[start:end], np.zeros((max_length - (end - start), INPUT_DIM)).astype(dtype = theano.config.floatX)), axis=0))
+            input_batch_y.append(np.concatenate((train_y[start:end], np.zeros((max_length - (end - start)))), axis=0))
             input_batch_mask.append(end - start)
 
-        print np.array(input_batch_x).shape
         batch_cost, pred, gradw, gradu, gradb = train_model(input_batch_x, input_batch_y, input_batch_mask)
 
         print("current epoch:" + str(epoch))

@@ -28,7 +28,7 @@ python2 -u $src_dir/train.py --input-dim $n_in --output-dim $n_out \
 	--hidden-layers $n_layers --neurons-per-layer $n_neurons \
 	--max-epochs $epochs  --batch-size $batch_size --learning-rate $learning_rate \
 	--learning-rate-decay $decay --momentum $momentum --l2-reg $l2_reg \
-	$data_dir/3lyr_4096nrn_1188in_prob.prb.train $data_dir/3lyr_4096nrn_1188in_prob.prb.dev \
+	$data_dir/3lyr_4096nrn_1188in_prob_fixed.prb.train $data_dir/3lyr_4096nrn_1188in_prob.prb.dev \
 	$model_dir/$1.mdl 2> $log_dir/$1.log
 
 echo "Program terminated."
