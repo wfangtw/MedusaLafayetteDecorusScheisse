@@ -99,8 +99,6 @@ f.close()
 print("===============================")
 print("Start Testing")
 y, y_prob = test_model()
-y = y.tolist()
-y_prob = y_prob.tolist()
 print("Current time: %f" % (time.time()-start_time))
 
 # Write prediction
@@ -111,6 +109,7 @@ for i in range(len(y)):
     f.write(test_id[i] + ',' + phone_map_1943i_48s[y[i]] + '\n')
 f.close()
 
+'''
 # Write probability
 print "Write probability"
 
@@ -144,6 +143,7 @@ with open(args.probability_out,'wb') as f:
             # cPickle.dump(y_prob[start:end], f, 2)
         # sn += 1
         # start = i + 1
+'''
 
 print("===============================")
 print("Total time: " + str(time.time()-start_time))

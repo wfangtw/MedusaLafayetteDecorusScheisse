@@ -14,3 +14,4 @@
 **/*.log
 **/label.dev
 **/label.dev.new
+**/*.csv
