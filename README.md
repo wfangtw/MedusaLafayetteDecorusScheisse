@@ -6,7 +6,7 @@
 - [Kaggle HW2](https://inclass.kaggle.com/c/104-1-mlds-hw2)
 
 ## Author
-- Yi-Lin Juang
 - Cake Win
+- Yi-Lin Juang
 - Wei Fang
 - Darren Huang

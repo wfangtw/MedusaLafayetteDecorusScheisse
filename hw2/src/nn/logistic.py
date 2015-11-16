@@ -11,37 +11,60 @@ import theano.tensor as T
 import activation as a
 
 class LogisticRegression:
-    def __init__(self, input_list, n_in, n_out, W=None, b=None):
-        w = np.zeros((n_in,n_out))
-        np.fill_diagonal(w, 1)
+    def __init__(self, input_list, n_in, n_out, n_total, mask, batch, W=None, b=None, M=None):
+
+        '''w = np.zeros((n_in,n_out))
+        np.fill_diagonal(w, 1)'''
 
         if W is None:
-            W = theano.shared(w.astype(dtype=theano.config.floatX))
+            W = theano.shared(np.random.randn(n_in, n_out).astype(dtype=theano.config.floatX)/np.sqrt(n_in))
         if b is None:
             b = theano.shared(np.zeros(n_out).astype(dtype=theano.config.floatX))
+        if M is None:
+            M = theano.shared(np.ones((n_total, 2)).astype(dtype=theano.config.floatX))
         self.W = W
         self.b = b
+        self.M = M
         self.v_W = theano.shared(np.zeros((n_in, n_out)).astype(dtype=theano.config.floatX))
         self.v_b = theano.shared(np.zeros(n_out).astype(dtype=theano.config.floatX))
+        self.v_M = theano.shared(np.zeros((n_total, 2)).astype(dtype=theano.config.floatX))
         self.input_list = input_list
-        self.y = a.geometric(a.softmax(T.dot(self.input_list[0], W) + b), a.softmax(T.dot(self.input_list[1][::-1], W) + b))
-        #self.y = a.softmax(T.dot(self.input_list[0], W) + b)
-        #self.y = self.input_list[0]
-        self.y_pred = T.argmax(self.y, axis=1)
-        self.params = [self.W, self.b]
-        self.velo = [self.v_W, self.v_b]
+        self.input_list[0] = self.input_list[0]
+        self.input_list[1] = (self.input_list[1])[::-1]
+
+        def Merge(input_seq1, input_seq2, merger):
+            return T.dot((input_seq1 * merger[0] + input_seq2 * merger[1]), self.W) + self.b
+
+        self.temp_y = a.softmax((theano.scan(Merge,
+            sequences=[self.input_list[0], self.input_list[1], self.M ],
+                outputs_info=None))[0])
+        self.temp_y = self.temp_y.dimshuffle(1,0,2)
+        self.mask = mask
+        self.batch = batch
+        self.y_pred = T.argmax(self.temp_y[0][:mask[0]], axis=1)
+        for i in range(1, batch):
+            T.concatenate((self.y_pred, T.argmax(self.temp_y[i][:mask[i]], axis=1)))
+
+
+        self.params = [self.W, self.b, self.M]
+        self.velo = [self.v_W, self.v_b, self.v_M]
 
     def negative_log_likelihood(self, y):
-        return -T.mean(T.log(self.y)[T.arange(y.shape[0]),y])
+        likelihood = 0
+        for i in range(0, self.batch):
+            T.set_subtensor(self.temp_y[i][self.mask[i]:], 1)
+            likelihood += -T.mean(T.log(self.temp_y[i])[T.arange(y[i].shape[0]), y[i]])
 
+        return likelihood
     def errors(self, y):
         # check if y has same dimension of y_pred
         if y.ndim != self.y_pred.ndim:
             raise TypeError('y should have the same shape as self.y_pred',('y', y.type, 'y_pred', self.y_pred.type))
         # check if y is of the correct datatype
-        if y.dtype.startswith('int'):
+        '''if y.dtype.startswith('int'):
             # the T.neq operator returns a vector of 0s and 1s, where 1
             # represents a mistake in prediction
             return T.mean(T.neq(self.y_pred, y))
         else:
             raise NotImplementedError()
+        '''
