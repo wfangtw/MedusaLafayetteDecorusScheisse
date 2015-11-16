@@ -52,7 +52,7 @@ print "label_dev [(30 + 16) * 8]: " + str(len(label_dev))
 
 # shuffle label_train
 print "shuffle label_train"
-label_train_unshuffled = label_train
+label_train_unshuffled = label_train[:]
 random.shuffle(label_train)
 
 #print "male: " + str(len(label_male))
