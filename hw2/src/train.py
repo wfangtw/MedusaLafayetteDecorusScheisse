@@ -74,21 +74,11 @@ start_time = time.time()
 
 def LoadData(filename, load_type):
     with open(filename,'rb') as f:
-        '''
-        if load_type == 'train' or load_type == 'dev':
-            data_x, data_y = cPickle.load(f)
-            shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX))
-            shared_y = theano.shared(np.asarray(data_y, dtype='int32'), borrow=True)
-            return shared_x, shared_y
-        else:
-            data_x, test_id = cPickle.load(f)
-            shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX), borrow=True)
-            return shared_x, test_id
-        '''
         if load_type == 'train':
             data_x = cPickle.load(f)
             data_y = cPickle.load(f)
             data_index = cPickle.load(f)
+            # print data_index[0]
 
             data_index = np.asarray(data_index, dtype=np.int32)
             max_length = 0
@@ -97,46 +87,19 @@ def LoadData(filename, load_type):
                     max_length = data_index[i+1] - data_index[i]
             np.append(data_index , int(math.ceil(len(data_x))))
 
-            shared_x = theano.shared(data_x)
-            shared_y = theano.shared(data_y, borrow=True)
-            shared_index = theano.shared(data_index)
-            return shared_x, shared_y, shared_index, max_length
+            return data_x, data_y, data_index, max_length
 
         elif load_type == 'dev':
             data_x = cPickle.load(f)
             data_y = cPickle.load(f)
             data_index = cPickle.load(f)
+            print data_index
 
             data_index = np.asarray(data_index, dtype=np.int32)
             shared_x = theano.shared(data_x)
             shared_y = theano.shared(data_y, borrow=True)
             shared_index = theano.shared(data_index)
             return shared_x, shared_y, shared_index
-
-
-        '''
-        if load_type == 'train_x':
-            data_x, index_list = cPickle.load(f)
-            shared_x = theano.shared(data_x)
-            return shared_x, index_list
-
-
-        elif load_type == 'train_y':
-            data_y = cPickle.load(f)
-            shared_y = theano.shared(data_y)
-            return shared_y
-
-        elif load_type == 'dev_x':
-            data_x, index_list = cPickle.load(f)
-            shared_x = theano.shared(data_x)
-            return shared_x, index_list
-
-        elif load_type == 'dev_y':
-            data_y = cPickle.load(f)
-            shared_y = theano.shared(data_y)
-            return shared_y
-        '''
-
 
 #momentum
 def Update(params, gradients, velocities):
@@ -150,24 +113,6 @@ def Update(params, gradients, velocities):
     LEARNING_RATE *= LEARNING_RATE_DECAY
     return param_updates
 
-'''
-#adagrad
-def Update(params, gradients, square_gra):
-    global LEARNING_RATE
-    global RMS_RATE
-    param_updates = [ (s, RMS_RATE * s + (1 - RMS_RATE) *g*g) for g, s in zip(gradients, square_gra) ]
-    for i in range(0, len(gradients)):
-
-        if ((gradients[i] + square_gra[i]) == gradients[i]) :
-            squre_gra[i] = gradients[i] * gradients[i]
-        else:
-            square_gra[i] = RMS_RATE * square_gra[i] + (1 - RMS_RATE) * gradients[i] * gradients[i]
-
-    param_updates.extend([ (p, p - LEARNING_RATE * g /T.sqrt(s) ) for p, s, g in zip(params, square_gra, gradients) ])
-    return param_updates
-'''
-
-
 ##################
 #   Load Data    #
 ##################
@@ -175,10 +120,6 @@ def Update(params, gradients, square_gra):
 # Load Dev data
 print("===============================")
 print("Loading dev data...")
-'''
-x_in = args.dev_in + '.x'
-y_in = args.dev_in + '.y'
-'''
 val_x, val_y, val_index = LoadData(args.dev_in,'dev')
 print("Current time: %f" % (time.time()-start_time))
 
@@ -186,18 +127,12 @@ print("Current time: %f" % (time.time()-start_time))
 
 print("===============================")
 print("Loading training data...")
-'''
-x_in = args.dev_in + '.x'
-y_in = args.dev_in + '.y'
-train_x, train_index = LoadData(x_in,'train_x')
-train_y = LoadData(y_in, 'train_y')'''
-
 train_x, train_y, train_index, max_length = LoadData(args.train_in,'train')
 print("Current time: %f" % (time.time()-start_time))
 
 print >> sys.stderr, "After loading: %f" % (time.time()-start_time)
 
-train_num = train_index.shape[0].eval() - 1
+train_num = len(train_index) - 1
 val_num = val_index.shape[0].eval()
 
 ###############
@@ -205,65 +140,9 @@ val_num = val_index.shape[0].eval()
 ###############
 
 # symbolic variables
-#indexi = T.lscalar()
-#indexf = T.lscalar()
 x = T.tensor3(dtype=theano.config.floatX)
 y = T.imatrix()
 mask = T.ivector()
-inputs = T.ivector()
-
-#Batch generating functions
-
-idx = T.iscalar()
-get_train_index = theano.function(
-        inputs=[idx],
-        outputs=train_index[idx]
-    )
-
-
-def stepX (u):
-
-    global train_x
-    end = get_train_index(u)
-    start = get_train_index(u)
-    length = end - start
-    print length.eval()
-    return T.concatenate((train_x[start : end], np.zeros((max_length - length , INPUT_DIM)).astype(dtype = theano.config.floatX)))
-
-def GenX ():
-    global inputs
-
-    return (theano.scan(stepX, sequences = inputs, outputs_info = None))[0]
-
-def stepY (u):
-
-    global train_y
-    global train_index
-    end = train_index[u+1]
-    start = train_index[u]
-    length = end - start
-    return T.concatenate((train_y[start : end], np.zeros((max_length - length , 1)).astype(dtype = theano.config.floatX)))
-
-
-def GenY ():
-    global inputs
-
-    return (theano.scan(stepY, sequences = inputs, outputs_info = None))[0]
-
-def stepMask (u):
-
-    global train_index
-    end = train_index[u+1]
-    start = train_index[u]
-    length = end - start
-    return length
-
-def GenMask ():
-    global inputs
-
-    return (thean.scan(stepMask, sequences = inputs, outputs_info = None))[0]
-
-
 
 # construct RNN class
 classifier = RNN(
@@ -303,16 +182,13 @@ dev_model = theano.function(
 dparams = [ T.grad(cost, param) for param in classifier.params ]
 print "gradient..."
 # compile "train model" function
+'''
 train_model = theano.function(
-        inputs=[inputs],
+        inputs=[x,y,mask],
         outputs=[cost,debug2,dparams[0],dparams[1],dparams[2]],
         updates=Update(classifier.params, dparams, classifier.velo),
-        givens={
-            x : GenX(),
-            y : GenY(),
-            mask : GenMask()
-            }
 )
+'''
 print "train_model built...@@...zzz..."
 
 ###############
@@ -348,39 +224,30 @@ while (epoch < EPOCHS) and training:
     epoch += 1
     print("===============================")
     print("EPOCH: " + str(epoch))
-    i = 0
     random.shuffle(training_indices)
     batch_indices = range(0, train_batch)
     for index in batch_indices:
 
-        list_in = []
-        if(index == batch_indices[-1]):
-            list_in = training_indices[index * BATCH_SIZE : -1]
-            list_in.append(training_indices[-1])
+        list_in = training_indices[index * BATCH_SIZE : (index+1) * BATCH_SIZE]
 
-        else:
-            list_in = training_indices[index * BATCH_SIZE : (index+1) * BATCH_SIZE]
+        input_batch_x = []
+        input_batch_y = []
+        input_batch_mask = []
+        for idx in list_in:
+            end = train_index[idx+1]
+            start = train_index[idx]
+            print "aaaaaaaaaa"
+            print train_x[start:end].shape
+            print np.zeros((max_length - (end - start), INPUT_DIM)).shape
+            input_batch_x.append(np.append(train_x[start:end], np.zeros((max_length - (end - start), INPUT_DIM)).astype(dtype = theano.config.floatX)))
+            input_batch_y.append(np.append(train_y[start:end], np.zeros((max_length - (end - start), INPUT_DIM))))
+            input_batch_mask.append(end - start)
 
-        batch_cost, pred, gradw, gradu, gradb = train_model(np.array(list_in))
-        #batch_cost = train_model(minibatch_index)
-        #iteration = (epoch - 1) * train_num + minibatch_index
-
-        '''if (iteration + 1) % val_freq == 0:
-            val_losses = [ dev_model(i) for i in xrange(0, train_num) ]
-            this_val_loss = np.mean(val_losses)
-            if this_val_loss < best_val_loss:
-                if this_val_loss < best_val_loss * improvement_threshold:
-                    patience = max(patience, iteration * patience_inc)
-                best_val_loss = this_val_loss
-    val_size = val_y.shape[0].eval()
-                best_iter = iteration
-            if patience <= iteration:
-                training = False
-                break'''
+        print np.array(input_batch_x).shape
+        batch_cost, pred, gradw, gradu, gradb = train_model(input_batch_x, input_batch_y, input_batch_mask)
 
         print("current epoch:" + str(epoch))
         print("cost: " + str(batch_cost))
-        i+=1
        # print("output prob: " + str(prob))
        # print("output pred: " + str(pred))
        # print("w grad: " + str(gradw))
@@ -393,23 +260,9 @@ while (epoch < EPOCHS) and training:
     val_acc = 1 - np.mean([ dev_model(i) for i in xrange(0, val_num) ])
     dev_acc.append(val_acc)
     print("dev accuracy: " + str(dev_acc[-1]))
-    print("Current time: " + str(time.time()-start_time))'''
-    '''if epoch == 20:
-        classifier.save_model("models/20_temp.mdl")
-    elif epoch == 40:
-        classifier.save_model("models/40_temp.mdl")
-    elif epoch == 50:
-        classifier.save_model("models/50_temp.mdl")
-    elif epoch == 60:
-        classifier.save_model("models/60_temp.mdl")
-    elif epoch == 80:
-        classifier.save_model("models/80_temp.mdl")
-    elif epoch == 100:
-        classifier.save_model("models/100_temp.mdl")'''
-#print(('Optimization complete. Best validation score of %f %% '
-#        'obtained at iteration %i') %
-#        (best_val_loss * 100., best_iter + 1))
-'''
+    print("Current time: " + str(time.time()-start_time))
+    '''
+
 print("===============================")
 print >> sys.stderr, dev_acc
 classifier.save_model(args.model_out)
@@ -418,4 +271,3 @@ print("===============================")
 print("Total time: " + str(time.time()-start_time))
 print >> sys.stderr, "Total time: %f" % (time.time()-start_time)
 print("===============================")
-'''

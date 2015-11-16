@@ -246,7 +246,7 @@ while (epoch < EPOCHS):
     print("===============================")
     print("EPOCH: " + str(epoch))
     random.shuffle(minibatch_indices)
-    val_accs = []
+    #val_accs = []
     for minibatch_index in minibatch_indices:
         file_batch = args.train_in + ".x." + str(minibatch_index)
         with open(file_batch, "rb") as f:
@@ -275,8 +275,9 @@ while (epoch < EPOCHS):
         if math.isnan(batch_cost):
             print >> sys.stderr, "Epoch #%i: nan error!!!" % epoch
             sys.exit()
-        val_accs.append(1 - np.mean([ dev_model(i) for i in xrange(0, val_num) ]))
-    val_acc = np.mean(val_accs)
+        #val_accs.append(1 - np.mean([ dev_model(i) for i in xrange(0, val_num) ]))
+    #val_acc = np.mean(val_accs)
+    val_acc = 1 - np.mean([ dev_model(i) for i in xrange(0, val_num) ])
     if val_acc > first:
         print("!!!!!!!!!!FIRST!!!!!!!!!!")
         third = second
