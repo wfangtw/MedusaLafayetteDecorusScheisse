@@ -34,8 +34,8 @@ parser.add_argument('model_in', type=str, metavar='<model-in>',
 					help='the dnn model stored with cPickle')
 parser.add_argument('prediction_out', type=str, metavar='<pred-out>',
 					help='the output file name you want for the output predictions')
-parser.add_argument('probability_out', type=str, metavar='<prob-out>',
-					help='the output file name you want for the output probabilities')
+#parser.add_argument('probability_out', type=str, metavar='<prob-out>',
+#					help='the output file name you want for the output probabilities')
 args = parser.parse_args()
 
 INPUT_DIM = args.input_dim
@@ -53,7 +53,7 @@ def LoadData(filename, load_type):
 start_time = time.time()
 print("===============================")
 print("Loading test data...")
-f_xy = args.test_in + ".xy"
+f_xy = args.test_in
 test_x, test_id = LoadData(f_xy,'test_xy')
 print "Total time: %f" % (time.time()-start_time)
 
