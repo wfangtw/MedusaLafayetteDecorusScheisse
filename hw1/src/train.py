@@ -110,7 +110,7 @@ def Update(params, gradients, square_gra):
     return param_updates
 
 def print_dev_acc():
-    print "===============dev_acc==============="
+    print "\n===============dev_acc==============="
     for acc in dev_acc:
         print >> sys.stderr, acc
 
@@ -216,14 +216,6 @@ print >> sys.stderr, "L2 regularization: %f" % L2_REG
 print >> sys.stderr, "iters per epoch: %i" % train_num
 print >> sys.stderr, "validation size: %i" % val_y.shape[0].eval()
 
-# patience = 10000
-# patience_inc = 2
-# improvent_threshold = 0.995
-
-# best_val_loss = np.inf
-# best_iter = 0
-# test_score = 0
-
 first = -1.0
 second = -1.0
 third = -1.0
@@ -238,45 +230,22 @@ signal.signal(signal.SIGINT, interrupt_handler)
 # set shutdown handler
 signal.signal(signal.SIGTERM, interrupt_handler)
 
-# training = True
-# val_freq = min(train_num, patience)
-# while (epoch < EPOCHS) and training:
-while (epoch < EPOCHS):
+while epoch < EPOCHS:
     epoch += 1
     print("===============================")
     print("EPOCH: " + str(epoch))
     random.shuffle(minibatch_indices)
-    #val_accs = []
     for minibatch_index in minibatch_indices:
         file_batch = args.train_in + ".x." + str(minibatch_index)
         with open(file_batch, "rb") as f:
             x_in = cPickle.load(f)
-        # x_in = train_x[ minibatch_index * BATCH_SIZE : (minibatch_index + 1) * BATCH_SIZE ].T
         # print("training: " + str(time.time()-start_time))
         batch_cost = train_model(x_in, minibatch_index)
         # print("trained: " + str(time.time()-start_time))
-        #batch_cost = train_model(minibatch_index)
-        # iteration = (epoch - 1) * train_num + minibatch_index
-        '''
-        if (iteration + 1) % val_freq == 0:
-            val_losses = [ dev_model(i) for i in xrange(0, train_num) ]
-            this_val_loss = np.mean(val_losses)
-            if this_val_loss < best_val_loss:
-                if this_val_loss < best_val_loss * improvement_threshold:
-                    patience = max(patience, iteration * patience_inc)
-                best_val_loss = this_val_loss
-    val_size = val_y.shape[0].eval()
-                best_iter = iteration
-            if patience <= iteration:
-                training = False
-                break
-        '''
         #print("cost: " + str(batch_cost))
         if math.isnan(batch_cost):
             print >> sys.stderr, "Epoch #%i: nan error!!!" % epoch
             sys.exit()
-        #val_accs.append(1 - np.mean([ dev_model(i) for i in xrange(0, val_num) ]))
-    #val_acc = np.mean(val_accs)
     val_acc = 1 - np.mean([ dev_model(i) for i in xrange(0, val_num) ])
     if val_acc > first:
         print("!!!!!!!!!!FIRST!!!!!!!!!!")
@@ -298,23 +267,7 @@ while (epoch < EPOCHS):
     print("dev accuracy: " + str(dev_acc[-1]))
     print("Current time: " + str(now_time-start_time))
     classifier.save_model("models/temp.mdl")
-    # if epoch == 20:
-        # classifier.save_model("models/20_temp.mdl")
-    # elif epoch == 40:
-        # classifier.save_model("models/40_temp.mdl")
-    # elif epoch == 60:
-        # classifier.save_model("models/60_temp.mdl")
-    # elif epoch == 80:
-        # classifier.save_model("models/80_temp.mdl")
-    # elif epoch == 100:
-        # classifier.save_model("models/100_temp.mdl")
-    # elif epoch == 120:
-        # classifier.save_model("models/120_temp.mdl")
-    # elif epoch == 140:
-        # classifier.save_model("models/140_temp.mdl")
-#print(('Optimization complete. Best validation score of %f %% '
-#        'obtained at iteration %i') %
-#        (best_val_loss * 100., best_iter + 1))
+
 print("===============================")
 print >> sys.stderr, "Total time: %f" % (time.time()-start_time)
 print_dev_acc()

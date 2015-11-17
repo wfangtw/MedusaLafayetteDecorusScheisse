@@ -93,6 +93,7 @@ test_model = theano.function(
         outputs=(classifier.output)
 )
 
+'''
 #####################
 #   Probing Train   #
 #####################
@@ -142,8 +143,8 @@ with open(f_train_prob,'wb') as f:
     cPickle.dump(y_train_idx, f, 2)
 
 print("Current time: %f" % (time.time()-start_time))
-
 '''
+
 ###################
 #   Probing Dev   #
 ###################
@@ -190,4 +191,3 @@ print("===============================")
 print("Total time: " + str(time.time()-start_time))
 print >> sys.stderr, "Total time: %f" % (time.time()-start_time)
 print("===============================")
-'''

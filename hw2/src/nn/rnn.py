@@ -67,8 +67,8 @@ class HiddenLayer:
             lin_output = T.tanh(T.dot(input, self.W2) +T.dot(pre_sequence, self.U2)+ self.b2)
             return lin_output
 
-        pre_sequence_0 = theano.shared(np.zeros((BATCH , n_out)).astype(dtype=theano.config.floatX))
-        pre_sequence_1 = theano.shared(np.zeros((BATCH , n_out)).astype(dtype=theano.config.floatX))
+        pre_sequence_0 = theano.shared(np.zeros((BATCH, n_out)).astype(dtype=theano.config.floatX))
+        pre_sequence_1 = theano.shared(np.zeros((BATCH, n_out)).astype(dtype=theano.config.floatX))
 
         self.output_list = []
         self.output_list.append(theano.scan(feedforward,
@@ -100,7 +100,7 @@ class RNN:
                     input_list=input_list,
                     n_in=n_in,
                     n_out=n_hidden,
-                    BATCH =batch
+                    BATCH=batch
                 )
         )
         self.params.extend(self.hiddenLayers[0].params)
@@ -122,8 +122,8 @@ class RNN:
                 n_in=n_hidden,
                 n_out=n_out,
                 n_total=n_total,
-                mask = mask,
-                batch = batch
+                mask=mask,
+                batch=batch
         )
         self.params.extend(self.logRegressionLayer.params)
         self.velo.extend(self.logRegressionLayer.velo)

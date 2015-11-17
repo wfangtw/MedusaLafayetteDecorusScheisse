@@ -1,11 +1,8 @@
-'''
-11/12 Finished
-'''
-
 import csv
+import sys
 
-Readfile = "test.csv"  #input file name
-Outputfile = "testout.csv"  #after trimed data output file
+Readfile = sys.argv[1]  #input file name
+Outputfile = sys.argv[2]  #after trimed data output file
 Mapfile = "48_idx_chr.map_b"
 idphone_dic = {}
 id_list = []
