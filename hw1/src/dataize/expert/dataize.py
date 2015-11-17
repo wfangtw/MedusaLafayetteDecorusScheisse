@@ -6,7 +6,7 @@ import theano
 # required parameters
 n = 11
 batch_size = 256
-out_dir = "expert11s"
+out_dir = "expert11ex"
 
 label_dim = {}        # label_dim[axxxx_yyyy] = [ [108 dim], [108dim], ...]
 
@@ -21,8 +21,8 @@ with open("label.dev.new", "rb") as f:
 print "======================================"
 print "     parse mfcc & fbank train.ark     "
 print "======================================"
-f_mfcc = open("/home/ray1007/MLDS/MLDS_hw1/Data/mfcc/train.ark", "r")
-f_fbank = open("/home/ray1007/MLDS/MLDS_hw1/Data/fbank/train.ark", "r")
+f_mfcc = open("../../../data/mfcc/train.ark", "r")
+f_fbank = open("../../../data/fbank/train.ark", "r")
 
 for mfcc_line, fbank_line in zip(f_mfcc, f_fbank):
     m_l = mfcc_line.strip(' \n').split(' ')
@@ -40,7 +40,6 @@ for mfcc_line, fbank_line in zip(f_mfcc, f_fbank):
 f_mfcc.close()
 f_fbank.close()
 
-'''
 # generate train batch files
 print "===================================="
 print "     generate train batch files     "
@@ -51,8 +50,8 @@ train_index = []
 dim_n = []
 sn = 0
 i = 1
-# for frame in label_train:
-for frame in label_train_unshuffled:
+for frame in label_train:
+# for frame in label_train_unshuffled:
 
     frame_name, frame_index = frame.rsplit('_', 1)      # axxxx_yyyyy, z
 
@@ -89,8 +88,8 @@ for frame in label_train_unshuffled:
 
         # write input to file
         print "write input to file"
-        # f_name = "../../../training_data/" + out_dir + "/train.x." + str(sn)
-        f_name = "../../../training_data/" + out_dir + "/train.unshuffled.x." + str(sn)
+        f_name = "../../../training_data/" + out_dir + "/train.x." + str(sn)
+        # f_name = "../../../training_data/" + out_dir + "/train.unshuffled.x." + str(sn)
         with open(f_name, "wb") as f:
             cPickle.dump(train_Tdata_ip, f, 2)
 
@@ -105,16 +104,16 @@ train_Tdata_op = np.asarray(train_op, dtype=np.int32)
 
 # write output to file
 print "write output to file"
-# with open("../../../training_data/" + out_dir + "/train.y", "wb") as f:
-with open("../../../training_data/" + out_dir + "/train.unshuffled.y", "wb") as f:
+with open("../../../training_data/" + out_dir + "/train.y", "wb") as f:
+# with open("../../../training_data/" + out_dir + "/train.unshuffled.y", "wb") as f:
     cPickle.dump(train_Tdata_op, f, 2)
-with open("../../../training_data/" + out_dir + "/train.idx", "wb") as f:
-    cPickle.dump(train_index, f, 2)
+# with open("../../../training_data/" + out_dir + "/train.idx", "wb") as f:
+    # cPickle.dump(train_index, f, 2)
 
 print "total " + str(i-1) + " frames."
 print "last file " + str(i - (sn - 1) * batch_size - 1) + " frames."
-'''
 
+'''
 # generate dev file
 print "==========================="
 print "     generate dev file     "
@@ -165,3 +164,4 @@ with open("../../../training_data/" + out_dir + "/dev.xy", "wb") as f:
     cPickle.dump(dev_Tdata, f, 2)
 with open("../../../training_data/" + out_dir + "/dev.idx", "wb") as f:
     cPickle.dump(dev_index, f, 2)
+'''
