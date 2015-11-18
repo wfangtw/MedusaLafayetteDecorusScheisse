@@ -226,8 +226,6 @@ while epoch < EPOCHS:
     print("EPOCH: " + str(epoch))
     random.shuffle(training_indices)
     for index in range(train_batch):
-        print "Train index: " + str(index)
-
         if index == train_batch - 1:
             list_in = training_indices[index * BATCH_SIZE : (index+1) * BATCH_SIZE]
             while len(list_in) < BATCH_SIZE:
@@ -263,14 +261,13 @@ while epoch < EPOCHS:
         batch_cost = train_model(input_batch_x, input_batch_y, input_batch_mask)
         # print("Trained: " + str(time.time()-start_time))
 
-        print("cost: " + str(batch_cost))
+        # print("#%i cost: %f" % (index, batch_cost))
         if math.isnan(batch_cost):
             print >> sys.stderr, "Epoch #%i: nan error!!!" % epoch
             sys.exit()
 
     batch_costs = []
     for index in range(val_batch):
-        print "Val index: " + str(index)
         # print("Val Gening: " + str(time.time()-start_time))
         input_batch_x = []
         input_batch_y = []
@@ -295,14 +292,13 @@ while epoch < EPOCHS:
         # print input_batch_mask.shape
         # print("Val Gened: " + str(time.time()-start_time))
 
-        print("Validating: " + str(time.time()-start_time))
+        # print("Validating: " + str(time.time()-start_time))
         batch_error = dev_model(input_batch_x, input_batch_y, input_batch_mask)
-        print batch_error
-        print type(batch_error)
+        # print("#%i cost: %f" % (index, batch_error))
         batch_costs.append(batch_error)
-        print("Validated: " + str(time.time()-start_time))
+        # print("Validated: " + str(time.time()-start_time))
 
-    print "Batch Costs: " + str(batch_costs)
+    # print "Batch Costs: " + str(batch_costs)
     val_acc = 1 - np.mean(batch_costs)
     if val_acc > first:
         print("!!!!!!!!!!FIRST!!!!!!!!!!")
@@ -321,7 +317,7 @@ while epoch < EPOCHS:
         classifier.save_model(args.model_out + ".3")
     dev_acc.append(val_acc)
     now_time = time.time()
-    print("dev accuracy: " + str(dev_acc[-1]))
+    print("Dev accuracy: " + str(dev_acc[-1]))
     print("Current time: " + str(now_time-start_time))
     classifier.save_model("models/temp.mdl")
 
