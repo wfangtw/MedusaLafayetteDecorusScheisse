@@ -40,7 +40,7 @@ class LogisticRegression:
         self.batch = batch
         y_pred_list = []
         for i in range(self.batch):
-            y_pred_list.append(T.argmax(self.temp_y[i][:self.mask[i]], axis=1))
+            y_pred_list.append(T.set_subtensor(T.argmax(self.temp_y[i], axis=1)[self.mask[i]:], 0))
         self.y_pred = T.stacklists(y_pred_list)
 
         self.params = [self.W, self.b, self.M]

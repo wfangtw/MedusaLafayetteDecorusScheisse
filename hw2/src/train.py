@@ -263,7 +263,7 @@ while epoch < EPOCHS:
         batch_cost = train_model(input_batch_x, input_batch_y, input_batch_mask)
         # print("Trained: " + str(time.time()-start_time))
 
-        # print("cost: " + str(batch_cost))
+        print("cost: " + str(batch_cost))
         if math.isnan(batch_cost):
             print >> sys.stderr, "Epoch #%i: nan error!!!" % epoch
             sys.exit()
