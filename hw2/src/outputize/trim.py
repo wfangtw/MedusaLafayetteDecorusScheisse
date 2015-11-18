@@ -1,7 +1,5 @@
 import csv
 import sys
-
-
 Readfile = sys.argv[1]      # input file name
 Outputfile = sys.argv[2]    # after trimed data output file
 Mapfile = "48_idx_chr.map_b"

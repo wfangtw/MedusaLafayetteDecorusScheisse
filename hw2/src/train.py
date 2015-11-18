@@ -1,7 +1,7 @@
 #########################################################
 #   FileName:       [ train.py ]                        #
-#   PackageName:    [ DNN ]                             #
-#   Synopsis:       [ Train DNN model ]                 #
+#   PackageName:    [ RNN ]                             #
+#   Synopsis:       [ Train RNN model ]                 #
 #   Author:         [ MedusaLafayetteDecorusSchiesse ]  #
 #########################################################
 
@@ -11,7 +11,7 @@ import cPickle
 import random
 import math
 import argparse
-from itertools import izip
+import signal
 
 import numpy as np
 import theano
@@ -19,7 +19,7 @@ import theano.tensor as T
 
 from nn.rnn import RNN
 
-parser = argparse.ArgumentParser(prog='train.py', description='Train DNN for Phone Classification.')
+parser = argparse.ArgumentParser(prog='train.py', description='Train RNN for Phone Classification.')
 parser.add_argument('--input-dim', type=int, required=True, metavar='<nIn>',
 					help='input dimension of network')
 parser.add_argument('--output-dim', type=int, required=True, metavar='<nOut>',
@@ -40,10 +40,6 @@ parser.add_argument('--learning-rate-decay', type=float, default=1., metavar='<d
 					help='learning rate decay')
 parser.add_argument('--momentum', type=float, default=0., metavar='<momentum>',
 					help='momentum in gradient descent')
-parser.add_argument('--l1-reg', type=float, default=0.,
-					help='L1 regularization')
-parser.add_argument('--l2-reg', type=float, default=0.,
-					help='L2 regularization')
 parser.add_argument('train_in', type=str, metavar='train-in',
 					help='training data file name')
 parser.add_argument('dev_in', type=str, metavar='dev-in',
@@ -58,13 +54,11 @@ HIDDEN_LAYERS = args.hidden_layers
 NEURONS_PER_LAYER = args.neurons_per_layer
 EPOCHS = args.max_epochs
 BATCH_SIZE = args.batch_size
-#RMS_RATE = args.rmsprop_rate
+# RMS_RATE = args.rmsprop_rate
 LEARNING_RATE = args.learning_rate
 LEARNING_RATE_DECAY = args.learning_rate_decay
 MOMENTUM = args.momentum
-L1_REG = args.l1_reg
-L2_REG = args.l2_reg
-SQUARE_GRADIENTS = 0
+# SQUARE_GRADIENTS = 0
 
 start_time = time.time()
 
@@ -80,13 +74,13 @@ def LoadData(filename, load_type):
             data_index = cPickle.load(f)
 
             data_index = np.asarray(data_index, dtype=np.int32)
-            max_length = 0
+            train_max_length = 0
             for i in range(len(data_index) - 1):
-                if((data_index[i+1] - data_index[i]) > max_length):
-                    max_length = data_index[i+1] - data_index[i]
-            np.append(data_index , int(math.ceil(len(data_x))))
+                if((data_index[i+1] - data_index[i]) > train_max_length):
+                    train_max_length = data_index[i+1] - data_index[i]
+            np.append(data_index , int(len(data_x)))
 
-            return data_x, data_y, data_index, max_length
+            return data_x, data_y, data_index, train_max_length
 
         elif load_type == 'dev':
             data_x = cPickle.load(f)
@@ -94,12 +88,15 @@ def LoadData(filename, load_type):
             data_index = cPickle.load(f)
 
             data_index = np.asarray(data_index, dtype=np.int32)
-            shared_x = theano.shared(data_x)
-            shared_y = theano.shared(data_y, borrow=True)
-            shared_index = theano.shared(data_index)
-            return shared_x, shared_y, shared_index
+            dev_max_length = 0
+            for i in range(len(data_index) - 1):
+                if((data_index[i+1] - data_index[i]) > dev_max_length):
+                    dev_max_length = data_index[i+1] - data_index[i]
+            np.append(data_index , int(len(data_x)))
 
-#momentum
+            return data_x, data_y, data_index, dev_max_length
+
+# Momentum
 def Update(params, gradients, velocities):
     global MOMENTUM
     global LEARNING_RATE
@@ -111,6 +108,17 @@ def Update(params, gradients, velocities):
     LEARNING_RATE *= LEARNING_RATE_DECAY
     return param_updates
 
+def print_dev_acc():
+    print "\n===============dev_acc==============="
+    for acc in dev_acc:
+        print >> sys.stderr, acc
+
+def interrupt_handler(signal, frame):
+    print >> sys.stderr, str(signal)
+    print >> sys.stderr, "Total time till last epoch: %f" % (now_time-start_time)
+    print_dev_acc()
+    sys.exit(0)
+
 ##################
 #   Load Data    #
 ##################
@@ -118,74 +126,66 @@ def Update(params, gradients, velocities):
 # Load Dev data
 print("===============================")
 print("Loading dev data...")
-val_x, val_y, val_index = LoadData(args.dev_in,'dev')
+val_x, val_y, val_index, val_max_length = LoadData(args.dev_in,'dev')
 print("Current time: %f" % (time.time()-start_time))
 
 # Load Training data
 
 print("===============================")
 print("Loading training data...")
-train_x, train_y, train_index, max_length = LoadData(args.train_in,'train')
+train_x, train_y, train_index, train_max_length = LoadData(args.train_in,'train')
 print("Current time: %f" % (time.time()-start_time))
 
 print >> sys.stderr, "After loading: %f" % (time.time()-start_time)
 
+max_length =  val_max_length if val_max_length > train_max_length else train_max_length
 train_num = len(train_index) - 1
-val_num = val_index.shape[0].eval()
+val_num = len(val_index) - 1
 
 ###############
 # Build Model #
 ###############
 
-# symbolic variables
+# Symbolic variables
 x = T.tensor3(dtype=theano.config.floatX)
 y = T.imatrix()
 mask = T.ivector()
 
-# construct RNN class
+# Construct RNN class
 classifier = RNN(
         input=x,
         n_in=INPUT_DIM,
         n_hidden=NEURONS_PER_LAYER,
         n_out=OUTPUT_DIM,
         n_layers=HIDDEN_LAYERS,
-        n_total = max_length,
-        batch = BATCH_SIZE,
-        mask = mask
+        n_total=max_length,
+        batch=BATCH_SIZE,
+        mask=mask
 )
-# cost + regularization terms; cost is symbolic
+
+# Cost
 cost = (
-        classifier.negative_log_likelihood(y) +
-        L1_REG * classifier.L1 +
-        L2_REG * classifier.L2_sqr
+        classifier.negative_log_likelihood(y)
 )
 
-debug2 = classifier.y_pred
-print "cost...."
-# compile "dev model" function
-
-'''
-dev_model = theano.function(
-        inputs=[indexi, indexf],
-        outputs=classifier.errors(y),
-        givens={
-            x: val_x[ indexi : indexf ],
-            y: val_y[ indexi : indexf ],
-            length: theano.shared(np.array([indexf - indexi]).astype(dtype=theano.config.floatX))
-        }
-)
-'''
-
-# gradients
+# Build Gradient
 dparams = [ T.grad(cost, param) for param in classifier.params ]
-print "gradient..."
-# compile "train model" function
+
+# Build Train Model
+print "Building Train Model..."
 train_model = theano.function(
         inputs=[x,y,mask],
-        outputs=[cost,debug2,dparams[0],dparams[1],dparams[2]],
+        outputs=cost,
         updates=Update(classifier.params, dparams, classifier.velo),
+        on_unused_input='warn'
 )
-print "train_model built...@@...zzz..."
+
+# Build Dev Model
+print "Building Dev Model"
+dev_model = theano.function(
+        inputs=[x,y,mask],
+        outputs=classifier.errors(y)
+)
 
 ###############
 # Train Model #
@@ -204,62 +204,131 @@ print >> sys.stderr, "Max epochs: %i" % EPOCHS
 print >> sys.stderr, "Learning rate: %f" % LEARNING_RATE
 print >> sys.stderr, "Learning rate decay: %f" % LEARNING_RATE_DECAY
 print >> sys.stderr, "Momentum: %f" % MOMENTUM
-print >> sys.stderr, "L1 regularization: %f" % L1_REG
-print >> sys.stderr, "L2 regularization: %f" % L2_REG
 print >> sys.stderr, "iters per epoch: %i" % train_num
-print >> sys.stderr, "validation size: %i" % val_y.shape[0].eval()
-#minibatch_indices = range(0, train_num)
-training_indices = range(0, train_num)
-epoch = 0
-train_batch = int(math.ceil(train_num/BATCH_SIZE))
+print >> sys.stderr, "validation size: %i" % len(val_index)
 
-training = True
+first = -1.0
+second = -1.0
+third = -1.0
+
+training_indices = range(0, train_num)
+train_batch = int(math.ceil(train_num / BATCH_SIZE))
+val_batch = int(math.ceil(val_num / BATCH_SIZE))
+epoch = 0
 dev_acc = []
-#combo = 0
-while (epoch < EPOCHS) and training:
+now_time = time.time()
+
+# set keyboard interrupt handler
+signal.signal(signal.SIGINT, interrupt_handler)
+# set shutdown handler
+signal.signal(signal.SIGTERM, interrupt_handler)
+
+while epoch < EPOCHS:
     epoch += 1
     print("===============================")
     print("EPOCH: " + str(epoch))
     random.shuffle(training_indices)
-    batch_indices = range(0, train_batch)
-    for index in batch_indices:
+    for index in range(train_batch):
+        print "Train index: " + str(index)
 
-        list_in = training_indices[index * BATCH_SIZE : (index+1) * BATCH_SIZE]
+        if index == train_batch - 1:
+            list_in = training_indices[index * BATCH_SIZE : (index+1) * BATCH_SIZE]
+            while len(list_in) < BATCH_SIZE:
+                list_in.append(-1)
+        else:
+            list_in = training_indices[index * BATCH_SIZE : (index+1) * BATCH_SIZE]
 
+        # print("Gening: " + str(time.time()-start_time))
         input_batch_x = []
         input_batch_y = []
         input_batch_mask = []
         for idx in list_in:
-            end = train_index[idx+1]
-            start = train_index[idx]
-            input_batch_x.append(np.concatenate((train_x[start:end], np.zeros((max_length - (end - start), INPUT_DIM)).astype(dtype = theano.config.floatX)), axis=0))
-            input_batch_y.append(np.concatenate((train_y[start:end], np.zeros((max_length - (end - start)))), axis=0))
-            input_batch_mask.append(end - start)
+            if idx == -1:
+                input_batch_x.append(np.zeros((max_length, INPUT_DIM)).astype(dtype = theano.config.floatX))
+                input_batch_y.append(np.zeros((max_length)).astype(dtype = np.int32))
+                input_batch_mask.append(input_batch_mask, 0)
+            else:
+                end = train_index[idx+1]
+                start = train_index[idx]
+                input_batch_x.append(np.concatenate((train_x[start:end], np.zeros((max_length - (end - start), INPUT_DIM)).astype(dtype = theano.config.floatX)), axis=0))
+                input_batch_y.append(np.concatenate((train_y[start:end], np.zeros((max_length - (end - start))).astype(dtype = np.int32)), axis=0))
+                input_batch_mask.append(end - start)
 
-        batch_cost, pred, gradw, gradu, gradb = train_model(input_batch_x, input_batch_y, input_batch_mask)
+        input_batch_x = np.array(input_batch_x)
+        input_batch_y = np.array(input_batch_y)
+        input_batch_mask = np.array(input_batch_mask)
+        # print input_batch_x.shape
+        # print input_batch_y.shape
+        # print input_batch_mask.shape
+        # print("Gened: " + str(time.time()-start_time))
 
-        print("current epoch:" + str(epoch))
-        print("cost: " + str(batch_cost))
-       # print("output prob: " + str(prob))
-       # print("output pred: " + str(pred))
-       # print("w grad: " + str(gradw))
-       # print("u grad: " + str(gradu))
-       # print("b grad: " + str(gradb))
+        # print("Training: " + str(time.time()-start_time))
+        batch_cost = train_model(input_batch_x, input_batch_y, input_batch_mask)
+        # print("Trained: " + str(time.time()-start_time))
+
+        # print("cost: " + str(batch_cost))
         if math.isnan(batch_cost):
             print >> sys.stderr, "Epoch #%i: nan error!!!" % epoch
             sys.exit()
-    '''
-    val_acc = 1 - np.mean([ dev_model(i) for i in xrange(0, val_num) ])
+
+    batch_costs = []
+    for index in range(val_batch):
+        print "Val index: " + str(index)
+        # print("Val Gening: " + str(time.time()-start_time))
+        input_batch_x = []
+        input_batch_y = []
+        input_batch_mask = []
+        for idx in range(BATCH_SIZE):
+            if index * BATCH_SIZE + idx >= val_num:
+                input_batch_x.append(np.zeros((max_length, INPUT_DIM)).astype(dtype = theano.config.floatX))
+                input_batch_y.append(np.zeros((max_length)).astype(dtype = np.int32))
+                input_batch_mask.append(input_batch_mask, 0)
+            else:
+                end = val_index[index * BATCH_SIZE + idx + 1]
+                start = val_index[index * BATCH_SIZE + idx]
+                input_batch_x.append(np.concatenate((val_x[start:end], np.zeros((max_length - (end - start), INPUT_DIM)).astype(dtype = theano.config.floatX)), axis=0))
+                input_batch_y.append(np.concatenate((train_y[start:end], np.zeros((max_length - (end - start))).astype(dtype = np.int32)), axis=0))
+                input_batch_mask.append(end - start)
+
+        input_batch_x = np.array(input_batch_x)
+        input_batch_y = np.array(input_batch_y)
+        input_batch_mask = np.array(input_batch_mask)
+        # print input_batch_x.shape
+        # print input_batch_y.shape
+        # print input_batch_mask.shape
+        # print("Val Gened: " + str(time.time()-start_time))
+
+        print("Validating: " + str(time.time()-start_time))
+        batch_costs.append(dev_model(input_batch_x, input_batch_y, input_batch_mask))
+        print("Validated: " + str(time.time()-start_time))
+
+    print "Batch Costs: " + str(batch_costs)
+    val_acc = 1 - np.mean(batch_costs)
+    if val_acc > first:
+        print("!!!!!!!!!!FIRST!!!!!!!!!!")
+        third = second
+        second = first
+        first = val_acc
+        classifier.save_model(args.model_out)
+    elif val_acc > second:
+        print("!!!!!!!!!!SECOND!!!!!!!!!!")
+        third = second
+        second = val_acc
+        classifier.save_model(args.model_out + ".2")
+    elif val_acc > third:
+        print("!!!!!!!!!!THIRD!!!!!!!!!!")
+        third = val_acc
+        classifier.save_model(args.model_out + ".3")
     dev_acc.append(val_acc)
+    now_time = time.time()
     print("dev accuracy: " + str(dev_acc[-1]))
-    print("Current time: " + str(time.time()-start_time))
-    '''
+    print("Current time: " + str(now_time-start_time))
+    classifier.save_model("models/temp.mdl")
 
 print("===============================")
-print >> sys.stderr, dev_acc
-classifier.save_model(args.model_out)
+print >> sys.stderr, "Total time: %f" % (time.time()-start_time)
+print_dev_acc()
 
 print("===============================")
 print("Total time: " + str(time.time()-start_time))
-print >> sys.stderr, "Total time: %f" % (time.time()-start_time)
 print("===============================")

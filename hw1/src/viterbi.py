@@ -40,13 +40,15 @@ NEURONS_PER_LAYER = args.neurons_per_layer
 def LoadData(filename, load_type):
     with open(filename,'r') as f:
         data_x, test_id = cPickle.load(f)
-        shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX))
+        shared_x = np.asarray(data_x, dtype=theano.config.floatX)
         return shared_x, test_id
 
 start_time = time.time()
 print("===============================")
 print("Loading test data...")
-test_x, test_id = LoadData(args.test_in,'test')
+test_x1, test_id = LoadData(args.test_in + '.1','test')
+test_x2, test_id2 = LoadData(args.test_in + '.2','test')
+test_id.extend(test_id2)
 
 with open(args.hmm_model_in, 'r') as f:
     amount = cPickle.load(f)
@@ -90,11 +92,8 @@ classifier = MLP(
 classifier.load_model(args.dnn_model_in)
 
 test_model = theano.function(
-        inputs=[],
-        outputs=classifier.output,
-        givens={
-            x: test_x.T
-        }
+        inputs=[x],
+        outputs=classifier.output
 )
 f = open('data/phones/state_48_39.map','r')
 phone_map = {}
@@ -107,7 +106,12 @@ f.close()
 # Testing
 print("===============================")
 print("MLP feedforward...")
-y = np.asarray(test_model())
+y1 = np.asarray(test_model(test_x1))
+print y1.shape
+y2 = np.asarray(test_model(test_x2))
+print y2.shape
+y = np.append(y1, y2, axis=0)
+print y.shape
 print("Current time: %f" % (time.time()-start_time))
 
 f = open(args.prediction_out,'w')
