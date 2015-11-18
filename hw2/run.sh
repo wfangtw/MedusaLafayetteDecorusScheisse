@@ -7,7 +7,7 @@ if [ $# -ne 1 ]; then
 fi
 
 src_dir=src
-data_dir=../hw1/probabilities
+data_dir=data
 pred_dir=predictions
 model_dir=models
 log_dir=log

@@ -293,13 +293,16 @@ while epoch < EPOCHS:
         input_batch_x = np.array(input_batch_x)
         input_batch_y = np.array(input_batch_y)
         input_batch_mask = np.array(input_batch_mask)
-        # print input_batch_x.shape
-        # print input_batch_y.shape
-        # print input_batch_mask.shape
+        print input_batch_x.shape
+        print input_batch_y.shape
+        print input_batch_mask.shape
         # print("Val Gened: " + str(time.time()-start_time))
 
         print("Validating: " + str(time.time()-start_time))
-        batch_costs.append(dev_model(input_batch_x, input_batch_y, input_batch_mask))
+        batch_error = dev_model(input_batch_x, input_batch_y, input_batch_mask)
+        print batch_error
+        print type(batch_error)
+        batch_costs.append(batch_error)
         print("Validated: " + str(time.time()-start_time))
 
     print "Batch Costs: " + str(batch_costs)
