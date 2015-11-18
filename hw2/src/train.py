@@ -169,7 +169,6 @@ cost = (
 )
 
 # Build Gradient
-print "Building Gradient..."
 dparams = [ T.grad(cost, param) for param in classifier.params ]
 
 # Build Train Model
@@ -230,6 +229,7 @@ while epoch < EPOCHS:
     print("EPOCH: " + str(epoch))
     random.shuffle(training_indices)
     for index in range(train_batch):
+        print "Train index: " + str(index)
 
         if index == train_batch - 1:
             list_in = training_indices[index * BATCH_SIZE : (index+1) * BATCH_SIZE]
@@ -262,9 +262,9 @@ while epoch < EPOCHS:
         # print input_batch_mask.shape
         # print("Gened: " + str(time.time()-start_time))
 
-        print("Training: " + str(time.time()-start_time))
+        # print("Training: " + str(time.time()-start_time))
         batch_cost = train_model(input_batch_x, input_batch_y, input_batch_mask)
-        print("Trained: " + str(time.time()-start_time))
+        # print("Trained: " + str(time.time()-start_time))
 
         # print("cost: " + str(batch_cost))
         if math.isnan(batch_cost):
@@ -273,6 +273,7 @@ while epoch < EPOCHS:
 
     batch_costs = []
     for index in range(val_batch):
+        print "Val index: " + str(index)
         # print("Val Gening: " + str(time.time()-start_time))
         input_batch_x = []
         input_batch_y = []
@@ -301,7 +302,7 @@ while epoch < EPOCHS:
         batch_costs.append(dev_model(input_batch_x, input_batch_y, input_batch_mask))
         print("Validated: " + str(time.time()-start_time))
 
-    print batch_costs
+    print "Batch Costs: " + str(batch_costs)
     val_acc = 1 - np.mean(batch_costs)
     if val_acc > first:
         print("!!!!!!!!!!FIRST!!!!!!!!!!")
