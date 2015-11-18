@@ -40,10 +40,6 @@ parser.add_argument('--learning-rate-decay', type=float, default=1., metavar='<d
 					help='learning rate decay')
 parser.add_argument('--momentum', type=float, default=0., metavar='<momentum>',
 					help='momentum in gradient descent')
-parser.add_argument('--l1-reg', type=float, default=0.,
-					help='L1 regularization')
-parser.add_argument('--l2-reg', type=float, default=0.,
-					help='L2 regularization')
 parser.add_argument('train_in', type=str, metavar='train-in',
 					help='training data file name')
 parser.add_argument('dev_in', type=str, metavar='dev-in',
@@ -62,9 +58,7 @@ BATCH_SIZE = args.batch_size
 LEARNING_RATE = args.learning_rate
 LEARNING_RATE_DECAY = args.learning_rate_decay
 MOMENTUM = args.momentum
-L1_REG = args.l1_reg
-L2_REG = args.l2_reg
-SQUARE_GRADIENTS = 0
+# SQUARE_GRADIENTS = 0
 
 start_time = time.time()
 
@@ -102,7 +96,7 @@ def LoadData(filename, load_type):
 
             return data_x, data_y, data_index, dev_max_length
 
-#momentum
+# Momentum
 def Update(params, gradients, velocities):
     global MOMENTUM
     global LEARNING_RATE
@@ -152,12 +146,12 @@ val_num = len(val_index) - 1
 # Build Model #
 ###############
 
-# symbolic variables
+# Symbolic variables
 x = T.tensor3(dtype=theano.config.floatX)
 y = T.imatrix()
 mask = T.ivector()
 
-# construct RNN class
+# Construct RNN class
 classifier = RNN(
         input=x,
         n_in=INPUT_DIM,
@@ -169,18 +163,9 @@ classifier = RNN(
         mask=mask
 )
 
-# cost + regularization terms; cost is symbolic
+# Cost
 cost = (
-        classifier.negative_log_likelihood(y) +
-        L1_REG * classifier.L1 +
-        L2_REG * classifier.L2_sqr
-)
-
-# Build Dev Model
-print "Building Dev Model"
-dev_model = theano.function(
-        inputs=[x,y,mask],
-        outputs=classifier.errors(y)
+        classifier.negative_log_likelihood(y)
 )
 
 # Build Gradient
@@ -194,6 +179,13 @@ train_model = theano.function(
         outputs=cost,
         updates=Update(classifier.params, dparams, classifier.velo),
         on_unused_input='warn'
+)
+
+# Build Dev Model
+print "Building Dev Model"
+dev_model = theano.function(
+        inputs=[x,y,mask],
+        outputs=classifier.errors(y)
 )
 
 ###############
@@ -213,8 +205,6 @@ print >> sys.stderr, "Max epochs: %i" % EPOCHS
 print >> sys.stderr, "Learning rate: %f" % LEARNING_RATE
 print >> sys.stderr, "Learning rate decay: %f" % LEARNING_RATE_DECAY
 print >> sys.stderr, "Momentum: %f" % MOMENTUM
-print >> sys.stderr, "L1 regularization: %f" % L1_REG
-print >> sys.stderr, "L2 regularization: %f" % L2_REG
 print >> sys.stderr, "iters per epoch: %i" % train_num
 print >> sys.stderr, "validation size: %i" % len(val_index)
 
@@ -248,14 +238,14 @@ while epoch < EPOCHS:
         else:
             list_in = training_indices[index * BATCH_SIZE : (index+1) * BATCH_SIZE]
 
-        print("Gening: " + str(time.time()-start_time))
+        # print("Gening: " + str(time.time()-start_time))
         input_batch_x = []
         input_batch_y = []
         input_batch_mask = []
         for idx in list_in:
             if idx == -1:
                 input_batch_x.append(np.zeros((max_length, INPUT_DIM)).astype(dtype = theano.config.floatX))
-                input_batch_y.append(np.zeros((max_length)))
+                input_batch_y.append(np.zeros((max_length)).astype(dtype = np.int32))
                 input_batch_mask.append(input_batch_mask, 0)
             else:
                 end = train_index[idx+1]
@@ -270,7 +260,7 @@ while epoch < EPOCHS:
         # print input_batch_x.shape
         # print input_batch_y.shape
         # print input_batch_mask.shape
-        print("Gened: " + str(time.time()-start_time))
+        # print("Gened: " + str(time.time()-start_time))
 
         print("Training: " + str(time.time()-start_time))
         batch_cost = train_model(input_batch_x, input_batch_y, input_batch_mask)
@@ -283,20 +273,20 @@ while epoch < EPOCHS:
 
     batch_costs = []
     for index in range(val_batch):
-        print("Val Gening: " + str(time.time()-start_time))
+        # print("Val Gening: " + str(time.time()-start_time))
         input_batch_x = []
         input_batch_y = []
         input_batch_mask = []
         for idx in range(BATCH_SIZE):
             if index * BATCH_SIZE + idx >= val_num:
                 input_batch_x.append(np.zeros((max_length, INPUT_DIM)).astype(dtype = theano.config.floatX))
-                input_batch_y.append(np.zeros((max_length)))
+                input_batch_y.append(np.zeros((max_length)).astype(dtype = np.int32))
                 input_batch_mask.append(input_batch_mask, 0)
             else:
                 end = val_index[index * BATCH_SIZE + idx + 1]
                 start = val_index[index * BATCH_SIZE + idx]
                 input_batch_x.append(np.concatenate((val_x[start:end], np.zeros((max_length - (end - start), INPUT_DIM)).astype(dtype = theano.config.floatX)), axis=0))
-                input_batch_y.append(np.concatenate((train_y[start:end], np.zeros((max_length - (end - start)))), axis=0))
+                input_batch_y.append(np.concatenate((train_y[start:end], np.zeros((max_length - (end - start))).astype(dtype = np.int32)), axis=0))
                 input_batch_mask.append(end - start)
 
         input_batch_x = np.array(input_batch_x)
@@ -305,7 +295,7 @@ while epoch < EPOCHS:
         # print input_batch_x.shape
         # print input_batch_y.shape
         # print input_batch_mask.shape
-        print("Val Gened: " + str(time.time()-start_time))
+        # print("Val Gened: " + str(time.time()-start_time))
 
         print("Validating: " + str(time.time()-start_time))
         batch_costs.append(dev_model(input_batch_x, input_batch_y, input_batch_mask))
