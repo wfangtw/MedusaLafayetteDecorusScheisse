@@ -86,12 +86,12 @@ f.close()
 
 f = open('data/phones/state_48_39.map','r')
 phone_map_1943i_48i = {}        # phone_map_1943i_48i[ 0 ~ 1942 ] = 0 ~ 47
-phone_map_1943i_48s = {}        # phone_map_1943i_48s[ 0 ~ 1942 ] = aa ~ z
+phone_map_1943i_39s = {}        # phone_map_1943i_48s[ 0 ~ 1942 ] = aa ~ z
 i = 0
 for l in f:
     mapping = l.strip(' \n').split('\t')        # mapping = 0 ~ 1942, aa ~ z, aa ~ z
     phone_map_1943i_48i[i] = phone_map_48s_48i[mapping[1]]
-    phone_map_1943i_48s[i] = mapping[1]
+    phone_map_1943i_39s[i] = mapping[2]
     i += 1
 f.close()
 
@@ -106,7 +106,7 @@ print "Write prediction"
 f = open(args.prediction_out,'w')
 f.write('Id,Prediction\n')
 for i in range(len(y)):
-    f.write(test_id[i] + ',' + phone_map_1943i_48s[y[i]] + '\n')
+    f.write(test_id[i] + ',' + phone_map_1943i_39s[y[i]] + '\n')
 f.close()
 
 '''
