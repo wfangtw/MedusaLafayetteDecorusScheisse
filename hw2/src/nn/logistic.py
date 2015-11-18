@@ -1,6 +1,6 @@
 #############################################################
 #   FileName:       [ logistic.py ]                         #
-#   PackageName:    [ DNN ]                                 #
+#   PackageName:    [ RNN ]                                 #
 #   Synopsis:       [ Define logistic regression layer ]    #
 #   Author:         [ MedusaLafayetteDecorusSchiesse ]      #
 #############################################################
