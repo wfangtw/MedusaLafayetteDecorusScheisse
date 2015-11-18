@@ -1,8 +1,8 @@
 #########################################################
-#   FileName:       [ dnn.py ]                          #
-#   PackageName:    [ DNN ]                             #
-#   Synopsis:       [ Define DNN model ]                #
-#   Author:         [ MedusaLafayetteDecorusSchiesse]   #
+#   FileName:       [ rnn.py ]                          #
+#   PackageName:    [ RNN ]                             #
+#   Synopsis:       [ Define RNN model ]                #
+#   Author:         [ MedusaLafayetteDecorusSchiesse ]  #
 #########################################################
 
 import numpy as np
@@ -138,9 +138,7 @@ class RNN:
             l2_sum +=abs(layer.W2 ** 2).sum() + abs(layer.W1 ** 2).sum() + abs(layer.U1 ** 2).sum() + abs(layer.U2 ** 2).sum()
         self.L2_sqr = l2_sum + (self.logRegressionLayer.W ** 2).sum()
         # negative log likelihood
-        self.negative_log_likelihood = (
-                self.logRegressionLayer.negative_log_likelihood
-        )
+        self.negative_log_likelihood = self.logRegressionLayer.negative_log_likelihood
         # errors
         self.errors = self.logRegressionLayer.errors
         # predict

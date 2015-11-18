@@ -39,8 +39,8 @@ class LogisticRegression:
         self.mask = mask
         self.batch = batch
         y_pred_list = []
-        for i in range(batch):
-            y_pred_list.append(T.argmax(self.temp_y[i][:mask[i]], axis=1))
+        for i in range(self.batch):
+            y_pred_list.append(T.argmax(self.temp_y[i][:self.mask[i]], axis=1))
         self.y_pred = T.stacklists(y_pred_list)
 
         self.params = [self.W, self.b, self.M]
@@ -49,8 +49,8 @@ class LogisticRegression:
     def negative_log_likelihood(self, y):
         likelihood = 0
         for i in range(0, self.batch):
-            T.set_subtensor(self.temp_y[i][self.mask[i]:], 1)
-            likelihood += -T.mean(T.log(self.temp_y[i])[T.arange(y[i].shape[0]), y[i]])
+            temp = T.set_subtensor(self.temp_y[i][self.mask[i]:], 1)
+            likelihood += -T.mean(T.log(temp)[T.arange(y[i].shape[0]), y[i]])
         return likelihood
 
     def errors(self, y):

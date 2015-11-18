@@ -164,9 +164,7 @@ classifier = RNN(
 )
 
 # Cost
-cost = (
-        classifier.negative_log_likelihood(y)
-)
+cost = classifier.negative_log_likelihood(y)
 
 # Build Gradient
 dparams = [ T.grad(cost, param) for param in classifier.params ]
@@ -176,8 +174,7 @@ print "Building Train Model..."
 train_model = theano.function(
         inputs=[x,y,mask],
         outputs=cost,
-        updates=Update(classifier.params, dparams, classifier.velo),
-        on_unused_input='warn'
+        updates=Update(classifier.params, dparams, classifier.velo)
 )
 
 # Build Dev Model
@@ -293,9 +290,9 @@ while epoch < EPOCHS:
         input_batch_x = np.array(input_batch_x)
         input_batch_y = np.array(input_batch_y)
         input_batch_mask = np.array(input_batch_mask)
-        print input_batch_x.shape
-        print input_batch_y.shape
-        print input_batch_mask.shape
+        # print input_batch_x.shape
+        # print input_batch_y.shape
+        # print input_batch_mask.shape
         # print("Val Gened: " + str(time.time()-start_time))
 
         print("Validating: " + str(time.time()-start_time))
