@@ -34,8 +34,12 @@ class LogisticRegression:
         def Merge(input_seq1, input_seq2, merger):
             return T.dot((input_seq1 * merger[0] + input_seq2 * merger[1]), self.W) + self.b
 
+
+        #def Merge(input_seq1, input_seq2):
+            #return T.dot((input_seq1 * 1 + input_seq2 * 0), self.W) + self.b
+
         self.temp_y = a.softmax((theano.scan(Merge,
-            sequences=[self.input_list[0], self.input_list[1], self.M ],
+            sequences=[self.input_list[0], self.input_list[1], self.M],
                 outputs_info=None))[0])
         self.temp_y = self.temp_y.dimshuffle(1,0,2)
         self.mask = mask

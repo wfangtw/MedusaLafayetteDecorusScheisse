@@ -232,8 +232,8 @@ second = -1.0
 third = -1.0
 
 training_indices = range(0, train_num)
-train_batch = int(math.ceil(train_num / BATCH_SIZE))
-val_batch = int(math.ceil(val_num / BATCH_SIZE))
+train_batch = int(math.ceil(1. * train_num / BATCH_SIZE))
+val_batch = int(math.ceil(1. * val_num / BATCH_SIZE))
 epoch = 0
 dev_acc = []
 now_time = time.time()
@@ -264,7 +264,7 @@ while epoch < EPOCHS:
             if idx == -1:
                 input_batch_x.append(np.zeros((max_length, INPUT_DIM)).astype(dtype = theano.config.floatX))
                 input_batch_y.append(np.zeros((max_length)).astype(dtype = np.int32))
-                input_batch_mask.append(input_batch_mask, 0)
+                input_batch_mask.append(0)
             else:
                 end = train_index[idx+1]
                 start = train_index[idx]
@@ -299,7 +299,7 @@ while epoch < EPOCHS:
             if index * BATCH_SIZE + idx >= val_num:
                 input_batch_x.append(np.zeros((max_length, INPUT_DIM)).astype(dtype = theano.config.floatX))
                 input_batch_y.append(np.zeros((max_length)).astype(dtype = np.int32))
-                input_batch_mask.append(input_batch_mask, 0)
+                input_batch_mask.append(0)
             else:
                 end = val_index[index * BATCH_SIZE + idx + 1]
                 start = val_index[index * BATCH_SIZE + idx]
