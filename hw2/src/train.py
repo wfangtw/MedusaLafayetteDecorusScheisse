@@ -32,8 +32,8 @@ parser.add_argument('--max-epochs', type=int, required=True, metavar='<nEpochs>'
 					help='number of maximum epochs')
 parser.add_argument('--batch-size', type=int, default=1, metavar='<size>',
 					help='size of minibatch')
-#parser.add_argument('--rmsprop-rate', type=float, default=0.1, metavar='<rmsrate>',
-#					help='Eastern misterious power. ')
+parser.add_argument('--rmsprop-rate', type=float, default=0.1, metavar='<rmsrate>',
+					help='Eastern mysterious power. ')
 parser.add_argument('--learning-rate', type=float, default=0.0001, metavar='<rate>',
 					help='learning rate of gradient descent')
 parser.add_argument('--learning-rate-decay', type=float, default=1., metavar='<decay>',
@@ -54,7 +54,7 @@ HIDDEN_LAYERS = args.hidden_layers
 NEURONS_PER_LAYER = args.neurons_per_layer
 EPOCHS = args.max_epochs
 BATCH_SIZE = args.batch_size
-# RMS_RATE = args.rmsprop_rate
+RMS_RATE = args.rmsprop_rate
 LEARNING_RATE = args.learning_rate
 LEARNING_RATE_DECAY = args.learning_rate_decay
 MOMENTUM = args.momentum
@@ -96,17 +96,38 @@ def LoadData(filename, load_type):
 
             return data_x, data_y, data_index, dev_max_length
 
+'''
 # Momentum
 def Update(params, gradients, velocities):
     global MOMENTUM
     global LEARNING_RATE
     global LEARNING_RATE_DECAY
-    param_updates = [ (v, v * MOMENTUM - LEARNING_RATE * g) for g, v in zip(gradients, velocities) ]
+
+    param_updates = [ (v, v * MOMENTUM - LEARNING_RATE * T.sgn(g) * T.clip(T.abs_(g), 0.01, 9.8)) for g, v in zip(gradients, velocities) ]
     for i in range(0, len(gradients)):
-        velocities[i] = velocities[i] * MOMENTUM - LEARNING_RATE * gradients[i]
+        velocities[i] = velocities[i] * MOMENTUM - LEARNING_RATE * T.sgn(gradients[i]) * T.clip(T.abs_(gradients[i]), 0.5, 9.8)
     param_updates.extend([ (p, p + v) for p, v in zip(params, velocities) ])
     LEARNING_RATE *= LEARNING_RATE_DECAY
     return param_updates
+
+'''
+#rmsprop
+def Update(params, gradients, square_gra):
+    global LEARNING_RATE
+    global RMS_RATE
+    temp_list = []
+    proper_grad = []
+    for i in range(0, len(gradients)):
+        proper_grad.append(T.clip(gradients[i],-9.8,9.8))
+        if (square_gra[i] + gradients[i] == gradients[i]) :
+                temp_list.append(proper_grad[i] * proper_grad[i])
+        else:
+            temp_list.append(RMS_RATE * square_gra[i] + (1 - RMS_RATE) * proper_grad[i] * proper_grad[i])
+
+    param_updates = [ (s, t) for s, t in zip(square_gra ,temp_list) ]
+    param_updates.extend([ (p, p - LEARNING_RATE * g /(T.sqrt(s) + 0.001 * T.ones_like(s)) ) for p, s, g in zip(params, temp_list, proper_grad) ])
+    return param_updates
+
 
 def print_dev_acc():
     print "\n===============dev_acc==============="
@@ -141,6 +162,8 @@ print >> sys.stderr, "After loading: %f" % (time.time()-start_time)
 max_length =  val_max_length if val_max_length > train_max_length else train_max_length
 train_num = len(train_index) - 1
 val_num = len(val_index) - 1
+
+print max_length
 
 ###############
 # Build Model #
@@ -197,7 +220,7 @@ print >> sys.stderr, "Output dimension: %i" % OUTPUT_DIM
 print >> sys.stderr, "# of layers: %i" % HIDDEN_LAYERS
 print >> sys.stderr, "# of neurons per layer: %i" % NEURONS_PER_LAYER
 print >> sys.stderr, "Max epochs: %i" % EPOCHS
-#print >> sys.stderr, "RMS rate: %i" % RMS_RATE
+print >> sys.stderr, "RMS rate: %f" % RMS_RATE
 print >> sys.stderr, "Learning rate: %f" % LEARNING_RATE
 print >> sys.stderr, "Learning rate decay: %f" % LEARNING_RATE_DECAY
 print >> sys.stderr, "Momentum: %f" % MOMENTUM
