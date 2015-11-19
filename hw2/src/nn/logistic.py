@@ -12,13 +12,15 @@ import activation as a
 
 class LogisticRegression:
     def __init__(self, input_list, n_in, n_out, n_total, mask, batch, W=None, b=None, M=None):
-
+        w = np.zeros((n_in, n_out))
+        np.fill_diagonal(w, 1)
         if W is None:
             W = theano.shared(np.random.randn(n_in, n_out).astype(dtype=theano.config.floatX)/np.sqrt(n_in))
+            #W = theano.shared(w.astype(dtype=theano.config.floatX)/np.sqrt(n_in))
         if b is None:
             b = theano.shared(np.zeros(n_out).astype(dtype=theano.config.floatX))
         if M is None:
-            M = theano.shared(np.ones((n_total, 2)).astype(dtype=theano.config.floatX))
+            M = theano.shared(0.5 * np.ones((n_total, 2)).astype(dtype=theano.config.floatX))
         self.W = W
         self.b = b
         self.M = M

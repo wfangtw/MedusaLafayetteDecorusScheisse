@@ -18,8 +18,8 @@ for line in fr:
     elif index == 2:
         pphone = phone
     else:
-        if phone == ppphone and phone != pphone:
-            pphone = phone
+        if pphone != ppphone and phone != pphone:
+            pphone = ppphone
         fw.write(s_id + "_" + str(index - 1) + "," + pphone + "\n")
         ppphone = pphone
         pphone = phone

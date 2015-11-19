@@ -96,14 +96,14 @@ def LoadData(filename, load_type):
 
             return data_x, data_y, data_index, dev_max_length
 
-'''
+
 # Momentum
 def Update(params, gradients, velocities):
     global MOMENTUM
     global LEARNING_RATE
     global LEARNING_RATE_DECAY
 
-    param_updates = [ (v, v * MOMENTUM - LEARNING_RATE * T.sgn(g) * T.clip(T.abs_(g), 0.01, 9.8)) for g, v in zip(gradients, velocities) ]
+    param_updates = [ (v, v * MOMENTUM - LEARNING_RATE * T.sgn(g) * T.clip(T.abs_(g), 0.0001, 9.8)) for g, v in zip(gradients, velocities) ]
     for i in range(0, len(gradients)):
         velocities[i] = velocities[i] * MOMENTUM - LEARNING_RATE * T.sgn(gradients[i]) * T.clip(T.abs_(gradients[i]), 0.5, 9.8)
     param_updates.extend([ (p, p + v) for p, v in zip(params, velocities) ])
@@ -127,7 +127,7 @@ def Update(params, gradients, square_gra):
     param_updates = [ (s, t) for s, t in zip(square_gra ,temp_list) ]
     param_updates.extend([ (p, p - LEARNING_RATE * g /(T.sqrt(s) + 0.001 * T.ones_like(s)) ) for p, s, g in zip(params, temp_list, proper_grad) ])
     return param_updates
-
+'''
 
 def print_dev_acc():
     print "\n===============dev_acc==============="
@@ -187,7 +187,7 @@ classifier = RNN(
 )
 
 # Cost
-cost = classifier.negative_log_likelihood(y)
+cost = classifier.negative_log_likelihood(y) + classifier.L2_sqr
 
 # Build Gradient
 dparams = [ T.grad(cost, param) for param in classifier.params ]

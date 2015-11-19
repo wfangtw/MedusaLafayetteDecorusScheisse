@@ -21,8 +21,10 @@ class HiddenLayer:
         np.fill_diagonal(u, 1)
         if W1 is None:
             W1 = theano.shared(np.random.randn(n_in,n_out).astype(dtype=theano.config.floatX)/np.sqrt(n_in))
+            #W1 = theano.shared(w.astype(dtype=theano.config.floatX))
         if W2 is None:
             W2 = theano.shared(np.random.randn(n_in,n_out).astype(dtype=theano.config.floatX)/np.sqrt(n_in))
+            #W2 = theano.shared(w.astype(dtype=theano.config.floatX))
         if U1 is None:
             U1 = theano.shared(u.astype(dtype=theano.config.floatX))
         if U2 is None:
@@ -136,7 +138,8 @@ class RNN:
         l2_sum = 0
         for layer in self.hiddenLayers:
             l2_sum +=abs(layer.W2 ** 2).sum() + abs(layer.W1 ** 2).sum() + abs(layer.U1 ** 2).sum() + abs(layer.U2 ** 2).sum()
-        self.L2_sqr = l2_sum + (self.logRegressionLayer.W ** 2).sum()
+
+        self.L2_sqr = l2_sum + (self.logRegressionLayer.W ** 2).sum() + (self.logRegressionLayer.M ** 2).sum()
         # negative log likelihood
         self.negative_log_likelihood = self.logRegressionLayer.negative_log_likelihood
         # errors

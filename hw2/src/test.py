@@ -1,7 +1,7 @@
 #########################################################
 #   FileName:       [ test.py ]                        #
-#   PackageName:    [ DNN ]                             #
-#   Synopsis:       [ Test DNN model ]                 #
+#   PackageName:    [ RNN ]                             #
+#   Synopsis:       [ Test RNN model ]                 #
 #   Author:         [ MedusaLafayetteDecorusSchiesse ]  #
 #########################################################
 
@@ -28,6 +28,8 @@ parser.add_argument('--hidden-layers', type=int, required=True, metavar='<nLayer
 					help='number of hidden layers')
 parser.add_argument('--neurons-per-layer', type=int, required=True, metavar='<nNeurons>',
 					help='number of neurons in a hidden layer')
+parser.add_argument('--batch-size', type=int, default=1, metavar='<size>',
+					help='size of minibatch')
 parser.add_argument('test_in', type=str, metavar='<test-in>',
 					help='testing data file name')
 parser.add_argument('model_in', type=str, metavar='<model-in>',
@@ -42,54 +44,90 @@ INPUT_DIM = args.input_dim
 OUTPUT_DIM = args.output_dim
 HIDDEN_LAYERS = args.hidden_layers
 NEURONS_PER_LAYER = args.neurons_per_layer
+BATCH_SIZE = args.batch_size
 
 def LoadData(filename, load_type):
     with open(filename,'rb') as f:
-        if load_type == "test_xy":
-            data_x, test_id = cPickle.load(f)
-            shared_x = theano.shared(data_x)
-            return shared_x, test_id
+        if load_type == 'test':
+            data_x = cPickle.load(f)
+            data_index = cPickle.load(f)
+            data_id = cPickle.load(f)
+
+            data_index = np.asarray(data_index, dtype=np.int32)
+            dev_max_length = 0
+            for i in range(len(data_index) - 1):
+                if((data_index[i+1] - data_index[i]) > dev_max_length):
+                    dev_max_length = data_index[i+1] - data_index[i]
+            np.append(data_index , int(len(data_x)))
+
+            return data_x, data_index, dev_max_length, data_id
 
 start_time = time.time()
 print("===============================")
 print("Loading test data...")
-f_xy = args.test_in + ".xy.2"
-test_x, test_id = LoadData(f_xy,'test_xy')
-print "Total time: %f" % (time.time()-start_time)
+test_x, test_index, test_max_length, test_id = LoadData(args.dev_in,'dev')
+print("Current time: %f" % (time.time()-start_time))
 
-x = T.matrix(dtype=theano.config.floatX)
+test_num = len(test_index) - 1
 
-classifier = MLP(
+# Symbolic variables
+x = T.tensor3(dtype=theano.config.floatX)
+y = T.imatrix()
+mask = T.ivector()
+
+# Construct RNN class
+classifier = RNN(
         input=x,
         n_in=INPUT_DIM,
         n_hidden=NEURONS_PER_LAYER,
         n_out=OUTPUT_DIM,
-        n_layers=HIDDEN_LAYERS
+        n_layers=HIDDEN_LAYERS,
+        n_total=max_length,
+        batch=BATCH_SIZE,
+        mask=mask
 )
+
 classifier.load_model(args.model_in)
 
+# Build Test Model
+print "Building Test Model"
 test_model = theano.function(
-        inputs=[],
-        outputs=(classifier.y_pred, classifier.output),
-        givens={
-            x: test_x
-        }
+        inputs=[x,mask],
+        outputs=classifier.y_pred
 )
+
 # Create Phone Map
-f = open('data/phones/state_48_39.map','r')
+f = open('data/phones/48_39.map','r')
 phone_map = {}
 i = 0
 for l in f:
-    phone_map[i] = l.strip(' \n').split('\t')[2]
+    phone_map[i] = l.strip(' \n').split('\t')[1]
     i += 1
 f.close()
 
 # Testing
 print("===============================")
 print("Start Testing")
-y, y_prob = test_model()
-y = y.tolist()
-y_prob = y_prob.tolist()
+y = []
+test_batch = int(math.ceil(test_num / BATCH_SIZE))
+for index in range(test_batch):
+    input_batch_x = []
+    input_batch_mask = []
+    for idx in range(BATCH_SIZE):
+        if index * BATCH_SIZE + idx >= val_num:
+            input_batch_x.append(np.zeros((max_length, INPUT_DIM)).astype(dtype = theano.config.floatX))
+            input_batch_mask.append(input_batch_mask, 0)
+        else:
+            end = test_index[index * BATCH_SIZE + idx + 1]
+            start = test_index[index * BATCH_SIZE + idx]
+            input_batch_x.append(np.concatenate((test_x[start:end], np.zeros((max_length - (end - start), INPUT_DIM)).astype(dtype = theano.config.floatX)), axis=0))
+            input_batch_mask.append(end - start)
+
+    input_batch_x = np.array(input_batch_x)
+    input_batch_mask = np.array(input_batch_mask)
+    y1 = test_model(input_batch_x, input_batch_mask)
+    y.extend(y1.tolist())
+
 print("Current time: %f" % (time.time()-start_time))
 
 # Write prediction
@@ -100,21 +138,3 @@ for i in range(len(y)):
     f.write(test_id[i] + ',' + phone_map[y[i]] + '\n')
 f.close()
 
-# Write probability
-print "Write probability"
-sn = 0
-start = 0
-for i in range(len(y)):
-    if i + 1 < len(y) and int(test_id[i+1].rsplit('_', 1)[1]) == 1:
-        print "sn = " + str(sn)
-        end = i + 1
-        f_name = args.probability_out + "." + str(sn)
-        with open(f_name,'wb') as f:
-            cPickle.dump(y_prob[start:end], f, 2)
-        sn += 1
-        start = i + 1
-
-print("===============================")
-print("Total time: " + str(time.time()-start_time))
-print >> sys.stderr, "Total time: %f" % (time.time()-start_time)
-print("===============================")

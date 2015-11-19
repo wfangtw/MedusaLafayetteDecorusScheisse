@@ -34,8 +34,8 @@ parser.add_argument('model_in', type=str, metavar='<model-in>',
 					help='the dnn model stored with cPickle')
 parser.add_argument('prediction_out', type=str, metavar='<pred-out>',
 					help='the output file name you want for the output predictions')
-#parser.add_argument('probability_out', type=str, metavar='<prob-out>',
-#					help='the output file name you want for the output probabilities')
+parser.add_argument('probability_out', type=str, metavar='<prob-out>',
+                                        help='the output file name you want for the output probabilities')
 args = parser.parse_args()
 
 INPUT_DIM = args.input_dim
@@ -101,6 +101,7 @@ print("Start Testing")
 y, y_prob = test_model()
 print("Current time: %f" % (time.time()-start_time))
 
+'''
 # Write prediction
 print "Write prediction"
 f = open(args.prediction_out,'w')
@@ -108,8 +109,8 @@ f.write('Id,Prediction\n')
 for i in range(len(y)):
     f.write(test_id[i] + ',' + phone_map_1943i_39s[y[i]] + '\n')
 f.close()
-
 '''
+
 # Write probability
 print "Write probability"
 
@@ -128,22 +129,11 @@ for i in range(len(y)):
     y_prob_48.append(prob_48.tolist())
 y_prob_48 = np.asarray(y_prob_48, dtype=theano.config.floatX)
 
-with open(args.probability_out,'wb') as f:
+f_test_prob = args.probability_out + ".test"
+with open(f_test_prob,'wb') as f:
     cPickle.dump(y_prob_48, f, 2)
     cPickle.dump(y_prob_idx, f, 2)
-
-# sn = 0
-# start = 0
-# for i in range(len(y)):
-    # if i + 1 < len(y) and int(test_id[i+1].rsplit('_', 1)[1]) == 1:
-        # print "sn = " + str(sn)
-        # end = i + 1
-        # f_name = args.probability_out + "." + str(sn)
-        # with open(f_name,'wb') as f:
-            # cPickle.dump(y_prob[start:end], f, 2)
-        # sn += 1
-        # start = i + 1
-'''
+    cPickle.dump(test_id, f, 2)
 
 print("===============================")
 print("Total time: " + str(time.time()-start_time))

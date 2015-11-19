@@ -19,7 +19,7 @@ for line in fr:
         pphone = phone
     else:
         if pphone != ppphone and phone != pphone:
-            pphone = phone
+            pphone = ppphone
         fw.write(s_id + "_" + str(index - 1) + "," + pphone + "\n")
         ppphone = pphone
         pphone = phone
