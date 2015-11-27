@@ -25,7 +25,7 @@ with open(sys.argv[1], "r") as fr:
                 pphone = phone
             pline = line
         fw.write(pline)         # Write the last sentence's last line
-'''
+
 min_count = 2
 
 with open(sys.argv[1], "r") as fr:
@@ -85,4 +85,4 @@ with open(sys.argv[1], "r") as fr:
         else:
             for i in range(count):
                 fw.write(current_sentence + "_" + str(current_id - count + 1 + i) + ',' + current_phone + '\n')
-'''
+

@@ -9,6 +9,8 @@ from itertools import izip
 import numpy as np
 
 parser = argparse.ArgumentParser(prog='viterbi.py', description='Decode Output of DNN Model for Phone Classification.')
+parser.add_argument('--weight', type=float, default=1., metavar='<weight>',
+					help='weight')
 parser.add_argument('test_in', type=str, metavar='<test-in>',
 					help='testing data file name')
 parser.add_argument('hmm_model_in', type=str, metavar='<hmm-model-in>',
@@ -16,6 +18,7 @@ parser.add_argument('hmm_model_in', type=str, metavar='<hmm-model-in>',
 parser.add_argument('prediction_out', type=str, metavar='<pred-out>',
 					help='the output file name you want for the output predictions')
 args = parser.parse_args()
+L = args.weight
 
 
 def LoadData(filename, load_type):
@@ -38,7 +41,9 @@ with open(args.hmm_model_in, 'r') as f:
     trans = np.log(cPickle.load(f))
     phone_prob = np.log(cPickle.load(f))
 
-trans2 = np.log(np.fill_diagonal(np.zeros((48, 48), int), 1))
+trans2 = np.zeros((48, 48), float)
+np.fill_diagonal(trans2, 1.)
+trans2 = np.log(trans2)
 
 init = np.zeros(48)
 init[36] = 1
@@ -49,13 +54,24 @@ def ViterbiDecode(prob, nframes):
     global init
     global trans
     back = np.zeros_like(prob, dtype='int32')
+    prev = np.ones((48), int)
 
-    prob[0] = prob[0] + init
+    prob[0] = L*prob[0] + init
     for i in range(1, nframes):
-        x = prob[i-1] + trans
-        prob[i] = prob[i] + np.max(x, axis=1)
+        #x = prob[i-1] + trans
+        x = prob[i-1] + np.zeros((48,48), float)
+        for j in range(48):
+            if prev[j] < 3:
+                prev[j] += 1
+                x[:,j] += trans2[:,j]
+            else:
+                x[:,j] += trans[:,j]
+        prob[i] = L*prob[i] + np.max(x, axis=1)
         #prob[i] = prob[i] + np.max(x, axis=1) - phone_prob
         back[i] = np.argmax(x, axis=1)
+        for j in range(48):
+            if back[i][j] != j:
+                prev[j] = 1
 
     pred = []
     pred.append(np.argmax(prob[nframes-1]))

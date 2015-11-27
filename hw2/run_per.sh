@@ -15,15 +15,15 @@ log_dir=log
 n_in=48
 n_out=48
 n_layers=1
-n_neurons=512
+n_neurons=32
 batch_size=8
 rms_rate=0.2
 epochs=300
-learning_rate=0.00000000001
+learning_rate=0.005
 decay=1.0
-momentum=0.0
+momentum=0.5
 
-python2 -u $src_dir/train.py --input-dim $n_in --output-dim $n_out \
+python2 -u $src_dir/train_per.py --input-dim $n_in --output-dim $n_out \
 	--hidden-layers $n_layers --neurons-per-layer $n_neurons \
 	--max-epochs $epochs  --batch-size $batch_size --rmsprop-rate $rms_rate  --learning-rate $learning_rate \
 	--learning-rate-decay $decay --momentum $momentum \

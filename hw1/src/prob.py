@@ -53,7 +53,6 @@ start_time = time.time()
 ########################
 
 f = open('data/phones/48_39.map','r')
-# f = open('/home/ray1007/MLDS/MLDS_hw1/Data/phones/48_39.map','r')
 phone_map_48s_48i = {}      # phone_map_48s_48i[ aa ~ z ] = 0 ~ 47
 i = 0
 for l in f:
@@ -62,7 +61,6 @@ for l in f:
 f.close()
 
 f = open('data/phones/state_48_39.map','r')
-# f = open('/home/ray1007/MLDS/MLDS_hw1/Data/phones/48_39.map','r')
 phone_map_1943i_48i = {}        # phone_map_1943i_48i[ 0 ~ 1942 ] = 0 ~ 47
 phone_map_1943i_48s = {}        # phone_map_1943i_48s[ 0 ~ 1942 ] = aa ~ z
 i = 0

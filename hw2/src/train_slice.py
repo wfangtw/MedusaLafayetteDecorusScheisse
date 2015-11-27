@@ -53,6 +53,7 @@ OUTPUT_DIM = args.output_dim
 HIDDEN_LAYERS = args.hidden_layers
 NEURONS_PER_LAYER = args.neurons_per_layer
 EPOCHS = args.max_epochs
+UTTER_SIZE = 50
 BATCH_SIZE = args.batch_size
 RMS_RATE = args.rmsprop_rate
 LEARNING_RATE = args.learning_rate
@@ -74,13 +75,9 @@ def LoadData(filename, load_type):
             data_index = cPickle.load(f)
 
             data_index = np.asarray(data_index, dtype=np.int32)
-            train_max_length = 0
-            for i in range(len(data_index) - 1):
-                if((data_index[i+1] - data_index[i]) > train_max_length):
-                    train_max_length = data_index[i+1] - data_index[i]
             data_index = np.append(data_index , int(len(data_x)))
 
-            return data_x, data_y, data_index, train_max_length
+            return data_x, data_y, data_index
 
         elif load_type == 'dev':
             data_x = cPickle.load(f)
@@ -88,13 +85,9 @@ def LoadData(filename, load_type):
             data_index = cPickle.load(f)
 
             data_index = np.asarray(data_index, dtype=np.int32)
-            dev_max_length = 0
-            for i in range(len(data_index) - 1):
-                if((data_index[i+1] - data_index[i]) > dev_max_length):
-                    dev_max_length = data_index[i+1] - data_index[i]
             data_index = np.append(data_index , int(len(data_x)))
 
-            return data_x, data_y, data_index, dev_max_length
+            return data_x, data_y, data_index
 
 
 # Momentum
@@ -147,23 +140,19 @@ def interrupt_handler(signal, frame):
 # Load Dev data
 print("===============================")
 print("Loading dev data...")
-val_x, val_y, val_index, val_max_length = LoadData(args.dev_in,'dev')
+val_x, val_y, val_index = LoadData(args.dev_in,'dev')
 print("Current time: %f" % (time.time()-start_time))
 
 # Load Training data
-
 print("===============================")
 print("Loading training data...")
-train_x, train_y, train_index, train_max_length = LoadData(args.train_in,'train')
+train_x, train_y, train_index = LoadData(args.train_in,'train')
 print("Current time: %f" % (time.time()-start_time))
 
 print >> sys.stderr, "After loading: %f" % (time.time()-start_time)
 
-max_length =  val_max_length if val_max_length > train_max_length else train_max_length
 train_num = len(train_index) - 1
 val_num = len(val_index) - 1
-
-print max_length
 
 ###############
 # Build Model #
@@ -181,7 +170,7 @@ classifier = RNN(
         n_hidden=NEURONS_PER_LAYER,
         n_out=OUTPUT_DIM,
         n_layers=HIDDEN_LAYERS,
-        n_total=max_length,
+        n_total=UTTER_SIZE,
         batch=BATCH_SIZE,
         mask=mask
 )
@@ -224,8 +213,6 @@ print >> sys.stderr, "RMS rate: %f" % RMS_RATE
 print >> sys.stderr, "Learning rate: %f" % LEARNING_RATE
 print >> sys.stderr, "Learning rate decay: %f" % LEARNING_RATE_DECAY
 print >> sys.stderr, "Momentum: %f" % MOMENTUM
-print >> sys.stderr, "Batch size: %i" % BATCH_SIZE
-print >> sys.stderr, "Clipping: yes"
 print >> sys.stderr, "iters per epoch: %i" % train_num
 print >> sys.stderr, "validation size: %i" % len(val_index)
 
@@ -233,9 +220,7 @@ first = -1.0
 second = -1.0
 third = -1.0
 
-training_indices = range(0, train_num)
-train_batch = int(math.ceil(1. * train_num / BATCH_SIZE))
-val_batch = int(math.ceil(1. * val_num / BATCH_SIZE))
+training_indices = range(train_num)
 epoch = 0
 dev_acc = []
 now_time = time.time()
@@ -250,78 +235,90 @@ while epoch < EPOCHS:
     print("===============================")
     print("EPOCH: " + str(epoch))
     random.shuffle(training_indices)
-    for index in range(train_batch):
-        if index == train_batch - 1:
-            list_in = training_indices[index * BATCH_SIZE : (index+1) * BATCH_SIZE]
-            while len(list_in) < BATCH_SIZE:
-                list_in.append(-1)
-        else:
-            list_in = training_indices[index * BATCH_SIZE : (index+1) * BATCH_SIZE]
-
-        # print("Gening: " + str(time.time()-start_time))
-        input_batch_x = []
-        input_batch_y = []
-        input_batch_mask = []
-        for idx in list_in:
-            if idx == -1:
-                input_batch_x.append(np.zeros((max_length, INPUT_DIM)).astype(dtype = theano.config.floatX))
-                input_batch_y.append(np.zeros((max_length)).astype(dtype = np.int32))
-                input_batch_mask.append(0)
-            else:
-                end = train_index[idx+1]
-                start = train_index[idx]
-                input_batch_x.append(np.concatenate((train_x[start:end], np.zeros((max_length - (end - start), INPUT_DIM)).astype(dtype = theano.config.floatX)), axis=0))
-                input_batch_y.append(np.concatenate((train_y[start:end], np.zeros((max_length - (end - start))).astype(dtype = np.int32)), axis=0))
-                input_batch_mask.append(end - start)
-
-        input_batch_x = np.array(input_batch_x)
-        input_batch_y = np.array(input_batch_y)
-        input_batch_mask = np.asarray(input_batch_mask, dtype='int32')
-        # print input_batch_x.shape
-        # print input_batch_y.shape
-        # print input_batch_mask.shape
-        # print("Gened: " + str(time.time()-start_time))
-
-        # print("Training: " + str(time.time()-start_time))
-        batch_cost = train_model(input_batch_x, input_batch_y, input_batch_mask)
-        # print("Trained: " + str(time.time()-start_time))
-
-        # print("#%i cost: %f" % (index, batch_cost))
-        if math.isnan(batch_cost):
-            print >> sys.stderr, "Epoch #%i: nan error!!!" % epoch
-            sys.exit()
-
+    batch_cnt = 0
+    input_batch_x = []
+    input_batch_y = []
+    input_batch_mask = []
+    for index in range(train_num):
+        idx = training_indices[index]
+        sentence_end = train_index[idx+1]
+        start = train_index[idx]
+        end = 0
+        while True:
+            if end == sentence_end:
+                break;
+            if start + UTTER_SIZE <= sentence_end:
+                end = start + UTTER_SIZE
+                input_batch_x.append(train_x[start:end])
+                input_batch_y.append(train_y[start:end])
+                input_batch_mask.append(UTTER_SIZE)
+                start += UTTER_SIZE
+                batch_cnt += 1
+            else:           # current sentence has some frames remained
+                end = sentence_end
+                input_batch_x.append(np.concatenate((train_x[start:end], np.zeros((UTTER_SIZE - (end - start), INPUT_DIM)).astype(dtype = theano.config.floatX)), axis=0))
+                input_batch_y.append(np.concatenate((train_y[start:end], np.zeros((UTTER_SIZE - (end - start))).astype(dtype = np.int32)), axis=0))
+                input_batch_mask.append(UTTER_SIZE)
+                batch_cnt += 1
+            if batch_cnt == BATCH_SIZE:
+                input_batch_x = np.array(input_batch_x)
+                input_batch_y = np.array(input_batch_y)
+                input_batch_mask = np.asarray(input_batch_mask, dtype="int32")
+                # print input_batch_x.shape
+                # print input_batch_y.shape
+                # print input_batch_mask.shape
+                # print("Training: " + str(time.time()-start_time))
+                batch_cost = train_model(input_batch_x, input_batch_y, input_batch_mask)
+                # print("Trained: " + str(time.time()-start_time))
+                # print("Cost: %f" % batch_cost)
+                if math.isnan(batch_cost):
+                    print >> sys.stderr, "Epoch #%i: nan error!!!" % epoch
+                    sys.exit()
+                batch_cnt = 0
+                input_batch_x = []
+                input_batch_y = []
+                input_batch_mask = []
+    batch_cnt = 0
+    input_batch_x = []
+    input_batch_y = []
+    input_batch_mask = []
     batch_costs = []
-    for index in range(val_batch):
-        # print("Val Gening: " + str(time.time()-start_time))
-        input_batch_x = []
-        input_batch_y = []
-        input_batch_mask = []
-        for idx in range(BATCH_SIZE):
-            if index * BATCH_SIZE + idx >= val_num:
-                input_batch_x.append(np.zeros((max_length, INPUT_DIM)).astype(dtype = theano.config.floatX))
-                input_batch_y.append(np.zeros((max_length)).astype(dtype = np.int32))
-                input_batch_mask.append(0)
-            else:
-                end = val_index[index * BATCH_SIZE + idx + 1]
-                start = val_index[index * BATCH_SIZE + idx]
-                input_batch_x.append(np.concatenate((val_x[start:end], np.zeros((max_length - (end - start), INPUT_DIM)).astype(dtype = theano.config.floatX)), axis=0))
-                input_batch_y.append(np.concatenate((val_y[start:end], np.zeros((max_length - (end - start))).astype(dtype = np.int32)), axis=0))
-                input_batch_mask.append(end - start)
-
-        input_batch_x = np.array(input_batch_x)
-        input_batch_y = np.array(input_batch_y)
-        input_batch_mask = np.asarray(input_batch_mask, dtype='int32')
-        # print input_batch_x.shape
-        # print input_batch_y.shape
-        # print input_batch_mask.shape
-        # print("Val Gened: " + str(time.time()-start_time))
-
-        # print("Validating: " + str(time.time()-start_time))
-        batch_error = dev_model(input_batch_x, input_batch_y, input_batch_mask)
-        # print("#%i cost: %f" % (index, batch_error))
-        batch_costs.append(batch_error)
-        # print("Validated: " + str(time.time()-start_time))
+    for idx in range(val_num):
+        sentence_end = val_index[idx+1]
+        start = val_index[idx]
+        end = 0
+        while True:
+            if end == sentence_end:
+                break;
+            if start + UTTER_SIZE <= sentence_end:
+                end = start + UTTER_SIZE
+                input_batch_x.append(val_x[start:end])
+                input_batch_y.append(val_y[start:end])
+                input_batch_mask.append(UTTER_SIZE)
+                start += UTTER_SIZE
+                batch_cnt += 1
+            else:           # current sentence has some frames remained
+                end = sentence_end
+                input_batch_x.append(np.concatenate((val_x[start:end], np.zeros((UTTER_SIZE - (end - start), INPUT_DIM)).astype(dtype = theano.config.floatX)), axis=0))
+                input_batch_y.append(np.concatenate((val_y[start:end], np.zeros((UTTER_SIZE - (end - start))).astype(dtype = np.int32)), axis=0))
+                input_batch_mask.append(UTTER_SIZE)
+                batch_cnt += 1
+            if batch_cnt == BATCH_SIZE:
+                input_batch_x = np.array(input_batch_x)
+                input_batch_y = np.array(input_batch_y)
+                input_batch_mask = np.asarray(input_batch_mask, dtype="int32")
+                # print input_batch_x.shape
+                # print input_batch_y.shape
+                # print input_batch_mask.shape
+                # print("Validating: " + str(time.time()-start_time))
+                batch_error = dev_model(input_batch_x, input_batch_y, input_batch_mask)
+                # print("Cost: %f" % batch_error)
+                batch_costs.append(batch_error)
+                # print("Validated: " + str(time.time()-start_time))
+                batch_cnt = 0
+                input_batch_x = []
+                input_batch_y = []
+                input_batch_mask = []
 
     # print "Batch Costs: " + str(batch_costs)
     val_acc = 1 - np.mean(batch_costs)

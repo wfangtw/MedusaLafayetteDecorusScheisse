@@ -20,11 +20,11 @@ class HiddenLayer:
         np.fill_diagonal(w, 1)
         np.fill_diagonal(u, 1)
         if W1 is None:
-            W1 = theano.shared(np.random.randn(n_in,n_out).astype(dtype=theano.config.floatX)/np.sqrt(n_in))
-            #W1 = theano.shared(w.astype(dtype=theano.config.floatX))
+            #W1 = theano.shared(np.random.randn(n_in,n_out).astype(dtype=theano.config.floatX)/np.sqrt(n_in))
+            W1 = theano.shared(w.astype(dtype=theano.config.floatX))
         if W2 is None:
-            W2 = theano.shared(np.random.randn(n_in,n_out).astype(dtype=theano.config.floatX)/np.sqrt(n_in))
-            #W2 = theano.shared(w.astype(dtype=theano.config.floatX))
+            #W2 = theano.shared(np.random.randn(n_in,n_out).astype(dtype=theano.config.floatX)/np.sqrt(n_in))
+            W2 = theano.shared(w.astype(dtype=theano.config.floatX))
         if U1 is None:
             U1 = theano.shared(u.astype(dtype=theano.config.floatX))
         if U2 is None:
@@ -159,10 +159,11 @@ class RNN:
             cPickle.dump(layer.b2.get_value(borrow=True), save_file, -1)
         cPickle.dump(self.logRegressionLayer.W.get_value(borrow=True), save_file, -1)
         cPickle.dump(self.logRegressionLayer.b.get_value(borrow=True), save_file, -1)
+        #cPickle.dump(self.logRegressionLayer.M.get_value(borrow=True), save_file, -1)
         save_file.close()
     # load_model
     def load_model(self, filename):
-        save_file = open(filename,'r')
+        save_file = open(filename,'rb')
         for layer in self.hiddenLayers:
             layer.W1.set_value(cPickle.load(save_file), borrow=True)
             layer.W2.set_value(cPickle.load(save_file), borrow=True)
@@ -172,3 +173,4 @@ class RNN:
             layer.b2.set_value(cPickle.load(save_file), borrow=True)
         self.logRegressionLayer.W.set_value(cPickle.load(save_file), borrow=True)
         self.logRegressionLayer.b.set_value(cPickle.load(save_file), borrow=True)
+        #self.logRegressionLayer.M.set_value(cPickle.load(save_file), borrow=True)

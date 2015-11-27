@@ -1,3 +1,4 @@
+import numpy as np
 """A module that SVM^python interacts with to do its evil bidding."""
 
 # Thomas Finley, tfinley@gmail.com
@@ -44,15 +45,13 @@ def read_examples(filename, sparm):
     with open(filename, 'rb') as f:
         x_prob = cPickle.load(f)
         x_y = cPickle.load(f)
+        x_index = cPickle.load(f)
 
     data = []
-    for idx in length(x_prob):
-        x_vector = []
-        for i in range(48):
-            x_element = i, x_prob[idx][i]
-            x_vector.append(x_element)
-        data_element = x_vector, x_y[idx]
-        data.append(data_element)
+    for i in (len(x_index) - 1) :
+        start = x_index[i]
+        end = x_index[i+1]
+        data.append((x_prob[start:end],x_y[start:end]))
 
     return data
 
@@ -67,7 +66,8 @@ def init_model(sample, sm, sparm):
     # list of four features.  We just want a linear rule, so we have a
     # weight corresponding to each feature.  We also add one to allow
     # for a last "bias" feature.
-    sm.size_psi = len(sample[0][0])+1
+    sm.size_psi = 2 * len(sample[0][0][0]) ** 2
+    #sm.size_psi = len(sample[0][0])+1
 
 def init_constraints(sample, sm, sparm):
     """Initializes special constraints.
@@ -127,6 +127,39 @@ def classify_example(x, sm, sparm):
     return sum([i*j for i,j in zip(x,sm.w[:-1])]) + sm.w[-1]
 
 def find_most_violated_constraint(x, y, sm, sparm):
+
+    prob_len = len(x[0])
+    trans_idx = prob_len ** 2
+    trans = np.asarray([sm.w[trans_idx + i * prob_len : trans_idx + (i+1)] for i in range(prob_len) ], dtype=np.float32)
+    trans = np.transpose(trans)
+    x = np.log(x)
+    ##viterbi start
+
+    start = np.zeros((prob_len, prob_len), dtype=np.float32)
+    init = np.zeros(prob_len)
+    init[36] = 1
+    init = np.log(init)
+
+    back = np.zeros_like(x, dtype='int32')
+
+    x[0] = x[0] + init
+    for i in range(1, len(x)):
+        loss = np.ones(prob_len)
+        loss[y[i-1]] = 0
+        temp = x[i-1] + trans
+        x[i] = x[i] + np.max(temp, axis=1) + loss
+        back[i] = np.argmax(temp, axis=1)
+
+    pred = []
+    pred.append(np.argmax(x[len(x)-1]))
+    i = 0
+    while i < (len(x)-1):
+        pred.append(back[len(x)-1-i][pred[i]])
+        i += 1
+    pred.reverse()
+    return pred
+
+
     """Return ybar associated with x's most violated constraint.
 
     Returns the label ybar for pattern x corresponding to the most
@@ -142,10 +175,11 @@ def find_most_violated_constraint(x, y, sm, sparm):
     loss into account at all, but it isn't always a terrible
     approximation.  One still technically maintains the empirical
     risk bound condition, but without any regularization."""
+    '''
     score = classify_example(x,sm,sparm)
     discy, discny = y*score, -y*score + 1
     if discy > discny: return y
-    return -y
+    return -y'''
 
 def find_most_violated_constraint_slack(x, y, sm, sparm):
     """Return ybar associated with x's most violated constraint.
@@ -174,6 +208,15 @@ def psi(x, y, sm, sparm):
     # or -1) times the feature vector for x, including that special
     # constant bias feature we pretend that we have.
     import svmapi
+    sentence_len = len(x)
+    feature = np.zeros((48*48*2), float)
+    for j in range(sentence_len):
+        feature[y[j]*48:(y[j]+1)*48] += x[j]
+        if j > 0:
+            prev = y[j-1]
+            curr = y[j]
+            feature[prev*48+curr] += 1
+
     thePsi = [0.5*y*i for i in x]
     thePsi.append(0.5*y) # Pretend as though x had an 1 at the end.
     return svmapi.Sparse(thePsi)
@@ -193,7 +236,7 @@ def loss(y, ybar, sparm):
     # If they're the same sign, then the loss should be 0.
     if y != yabr:
         return 1.0
-    else
+    else:
         return 0.0
 
 def print_iteration_stats(ceps, cached_constraint, sample, sm,

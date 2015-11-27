@@ -52,7 +52,7 @@ test_id.extend(test_id2)
 
 with open(args.hmm_model_in, 'r') as f:
     amount = cPickle.load(f)
-    trans = cPickle.load(f)
+    trans = np.log(cPickle.load(f))
 
 init = np.zeros(1943)
 init[0] = 1

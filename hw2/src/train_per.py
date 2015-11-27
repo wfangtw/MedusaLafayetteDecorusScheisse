@@ -129,6 +129,56 @@ def Update(params, gradients, square_gra):
     return param_updates
 '''
 
+def calculate_PER(y_p, y_a):
+    print "len(y_p) = %i, len(y_a) =%i " % (len(y_p), len(y_a))
+    r = []
+    h = []
+    for idx in range(val_num):
+        end = val_index[idx + 1]
+        start = val_index[idx]
+        now_p = 36
+        now_a = 36
+        for a, b in zip(y_p[start:end], y_a[start:end]):
+            if a != now_p:
+                now_p = a
+                r.append(now_p)
+            if b != now_a:
+                now_a = b
+                h.append(now_a)
+        if now_p == 36:
+            r.pop()
+        if now_a == 36:
+            h.pop()
+    print "len(r) = %i, len(h) = %i" % (len(r), len(h))
+    d = np.zeros((len(r) + 1) * (len(h) + 1), dtype=np.int32)
+    d = d.reshape((len(r) + 1, len(h) + 1))
+    for i in range(len(r) + 1):
+        print "d[0][0]\t" + str(i)
+        for j in range(len(h) + 1):
+            if i == 0:
+                d[0][j] = j
+            elif j == 0:
+                d[i][0] = i
+
+    # computation
+    for i in range(1, len(r) + 1):
+        print "d[?][?]\t" + str(i)
+        for j in range(1, len(h) + 1):
+            if r[i-1] == h[j-1]:
+                d[i][j] = d[i-1][j-1]
+            else:
+                substitution = d[i-1][j-1] + 1
+                insertion    = d[i][j-1] + 1
+                deletion     = d[i-1][j] + 1
+                d[i][j] = min(substitution, insertion, deletion)
+
+    # edit distance
+    dist = d[len(r)][len(h)]
+
+    # error rate
+    per = 1. * dist / len(r)
+    return per
+
 def print_dev_acc():
     print "\n===============dev_acc==============="
     for acc in dev_acc:
@@ -163,7 +213,7 @@ max_length =  val_max_length if val_max_length > train_max_length else train_max
 train_num = len(train_index) - 1
 val_num = len(val_index) - 1
 
-print max_length
+# print max_length
 
 ###############
 # Build Model #
@@ -203,8 +253,8 @@ train_model = theano.function(
 # Build Dev Model
 print "Building Dev Model"
 dev_model = theano.function(
-        inputs=[x,y,mask],
-        outputs=classifier.errors(y)
+        inputs=[x,mask],
+        outputs=classifier.y_pred
 )
 
 ###############
@@ -291,23 +341,26 @@ while epoch < EPOCHS:
             print >> sys.stderr, "Epoch #%i: nan error!!!" % epoch
             sys.exit()
 
-    batch_costs = []
+    batch_preds = []
     for index in range(val_batch):
         # print("Val Gening: " + str(time.time()-start_time))
         input_batch_x = []
         input_batch_y = []
         input_batch_mask = []
+        pred_mask = []
         for idx in range(BATCH_SIZE):
             if index * BATCH_SIZE + idx >= val_num:
                 input_batch_x.append(np.zeros((max_length, INPUT_DIM)).astype(dtype = theano.config.floatX))
                 input_batch_y.append(np.zeros((max_length)).astype(dtype = np.int32))
                 input_batch_mask.append(0)
+                pred_mask.append((idx * max_length, (idx + 1) * max_length))
             else:
                 end = val_index[index * BATCH_SIZE + idx + 1]
                 start = val_index[index * BATCH_SIZE + idx]
                 input_batch_x.append(np.concatenate((val_x[start:end], np.zeros((max_length - (end - start), INPUT_DIM)).astype(dtype = theano.config.floatX)), axis=0))
                 input_batch_y.append(np.concatenate((val_y[start:end], np.zeros((max_length - (end - start))).astype(dtype = np.int32)), axis=0))
                 input_batch_mask.append(end - start)
+                pred_mask.append((idx * max_length + (end - start), (idx + 1) * max_length))
 
         input_batch_x = np.array(input_batch_x)
         input_batch_y = np.array(input_batch_y)
@@ -318,13 +371,17 @@ while epoch < EPOCHS:
         # print("Val Gened: " + str(time.time()-start_time))
 
         # print("Validating: " + str(time.time()-start_time))
-        batch_error = dev_model(input_batch_x, input_batch_y, input_batch_mask)
+        batch_pred = dev_model(input_batch_x, input_batch_mask)
         # print("#%i cost: %f" % (index, batch_error))
-        batch_costs.append(batch_error)
+        for s,e in reversed(pred_mask):
+            print "s = %i, e = %i" % (s, e)
+            batch_pred = np.delete(batch_pred, [i for i in range(s,e)])
+        batch_preds.extend(batch_pred.tolist())
+        print len(batch_preds)
         # print("Validated: " + str(time.time()-start_time))
 
     # print "Batch Costs: " + str(batch_costs)
-    val_acc = 1 - np.mean(batch_costs)
+    val_acc = 100.0 - calculate_PER(batch_preds, val_y)
     if val_acc > first:
         print("!!!!!!!!!!FIRST!!!!!!!!!!")
         third = second
@@ -342,7 +399,7 @@ while epoch < EPOCHS:
         classifier.save_model(args.model_out + ".3")
     dev_acc.append(val_acc)
     now_time = time.time()
-    print("Dev accuracy: " + str(dev_acc[-1]))
+    print("100 - Phone Error Rate: " + str(dev_acc[-1]))
     print("Current time: " + str(now_time-start_time))
     classifier.save_model("models/temp.mdl")
 

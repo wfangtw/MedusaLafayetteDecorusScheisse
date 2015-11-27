@@ -15,8 +15,8 @@ class LogisticRegression:
         w = np.zeros((n_in, n_out))
         np.fill_diagonal(w, 1)
         if W is None:
-            W = theano.shared(np.random.randn(n_in, n_out).astype(dtype=theano.config.floatX)/np.sqrt(n_in))
-            #W = theano.shared(w.astype(dtype=theano.config.floatX)/np.sqrt(n_in))
+            #W = theano.shared(np.random.randn(n_in, n_out).astype(dtype=theano.config.floatX)/np.sqrt(n_in))
+            W = theano.shared(w.astype(dtype=theano.config.floatX)/np.sqrt(n_in))
         if b is None:
             b = theano.shared(np.zeros(n_out).astype(dtype=theano.config.floatX))
         if M is None:
@@ -30,17 +30,22 @@ class LogisticRegression:
         self.input_list = input_list
         self.input_list[0] = self.input_list[0]
         self.input_list[1] = (self.input_list[1])[::-1]
-
+        '''
         def Merge(input_seq1, input_seq2, merger):
             return T.dot((input_seq1 * merger[0] + input_seq2 * merger[1]), self.W) + self.b
-
-
-        #def Merge(input_seq1, input_seq2):
-            #return T.dot((input_seq1 * 1 + input_seq2 * 0), self.W) + self.b
-
         self.temp_y = a.softmax((theano.scan(Merge,
             sequences=[self.input_list[0], self.input_list[1], self.M],
                 outputs_info=None))[0])
+        '''
+
+        def Merge(input_seq1, input_seq2):
+            return T.dot((input_seq1 * 1 + input_seq2 * 0), self.W) + self.b
+
+        self.temp_y = a.softmax((theano.scan(Merge,
+            sequences=[self.input_list[0], self.input_list[1]],
+                outputs_info=None))[0])
+
+
         self.temp_y = self.temp_y.dimshuffle(1,0,2)
         self.mask = mask
         self.batch = batch
