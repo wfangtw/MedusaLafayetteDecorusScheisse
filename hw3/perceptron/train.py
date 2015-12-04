@@ -64,124 +64,15 @@ def ViterbiDecode(weight, prob, nframes):
     return pred
 
 def GradientAscent(weight, x, feature, sentence_len, learning_rate):
-    psi = ForwardBackward(weight, x, sentence_len)
-    #print '='*20
-    #for i in range(4608):
-        #print '#%i: %f, %f' % (i, psi[i], feature[i])
-    #print psi[0:2304].sum(), psi[2304:4608].sum()
-    #print feature[0:2304].sum(), feature[2304:4608].sum()
-    #print '='*20
-    #print weight
+    pred = ViterbiDecode(weight, x, sentence_len)
+    psi = GenFeatures(x, pred)
+    '''
+    print '='*20
+    for i in range(4608):
+        print '#%i: %f, %f' % (i, psi[i], feature[i])
+    print '='*20
+    '''
     return ( weight + learning_rate * (feature - psi) )
-
-def ForwardBackward(weight, prob, nframes):
-    global init
-    trans = np.reshape(weight[2304:4608], (48, 48)).T
-    #trans = np.log(trans)
-    alpha = np.zeros_like(prob, float)
-    beta = np.zeros_like(prob, float)
-    emission_prob = np.dot(prob, np.reshape(weight[0:2304], (48, 48)).T)
-    #print emission_prob
-
-    #forward
-    alpha[0] = emission_prob[0] + init
-    for i in range(1, nframes):
-        x = alpha[i-1] + trans
-        alpha[i] = emission_prob[i] + Sum(x)
-    #print 'alpha...'
-    #print alpha
-    if math.isnan(alpha[nframes-1][0]) or math.isnan(alpha[0][0]):
-        print >> sys.stdout, "Alpha: nan error!!!"
-        print >> sys.stderr, "Alpha: nan error!!!"
-        sys.exit()
-
-    #backward
-    for i in reversed(range(0, nframes-1)):
-        x = beta[i+1] + trans.T + emission_prob[i+1]
-        beta[i] = Sum(x)
-    #print 'beta...'
-    #print beta
-    if math.isnan(beta[0][0]):
-        print >> sys.stdout, "Beta: nan error!!!"
-        print >> sys.stderr, "Beta: nan error!!!"
-        sys.exit()
-
-    #combining forward/backward variables: gamma
-    gamma = alpha + beta
-    for i in range(nframes):
-        gamma[i] = gamma[i] - SumProb(gamma[i], 1)
-    #print 'alpha beta....'
-    #print alpha_beta
-
-    #epsilon
-    epsilon = np.zeros((nframes, 48, 48), float)
-    for i in range(nframes - 1):
-        epsilon[i] = (alpha[i] + trans) + emission_prob[i+1].T + beta[i+1].T
-        epsilon[i] = epsilon[i] - SumProb(epsilon[i], 2)
-    #print 'epsilon'
-    #print epsilon
-    if math.isnan(epsilon[nframes-1][0][0]) or math.isnan(epsilon[0][0][0]):
-        print >> sys.stdout, "Epsilon: nan error!!!"
-        print >> sys.stderr, "Epsilon: nan error!!!"
-        sys.exit()
-
-    #create modified psi
-    psi = np.zeros_like(weight, float)
-    # 0 ~ 2303
-    for i in range(nframes):
-        for j in range(48):
-            psi[48*j:48*(j+1)] += np.exp(gamma[i][j]) * prob[i]
-    # 2304 ~ 4607
-    new_trans = np.sum(np.exp(epsilon[0:(nframes-1)]), axis=0)
-    #print 'new_trans'
-    #print new_trans
-    psi[2304:4608] = np.reshape(new_trans.T, (2304))
-    #print 'psi...'
-    #print psi
-    if math.isnan(psi[0]) or math.isnan(psi[4607]):
-        print >> sys.stdout, "Psi: nan error!!!"
-        print >> sys.stderr, "Psi: nan error!!!"
-        sys.exit()
-
-    return psi
-
-def Sum(x):
-    temp = np.zeros((48), float)
-    for i in range(48):
-        if i == 0:
-            temp = x[:,i]
-            continue
-        #temp += np.logaddexp(temp, x[:,i])
-        for j in range(48):
-            temp[j] = AddLogProb(temp[j], x[j][i])
-    return temp
-
-def SumProb(x, dim):
-    s = 0
-    if dim == 2:
-        for i in range(48):
-            for j in range(48):
-                if i == 0 and j == 0:
-                    s = x[0][0]
-                    continue
-                s = AddLogProb(s, x[i][j])
-    elif dim == 1:
-        s = x[0]
-        for i in range(1, 48):
-            s = AddLogProb(s, x[i])
-    if s == -np.inf:
-        return 0
-    else:
-        return s
-
-def AddLogProb(x, y):
-    if x == -np.inf and y == -np.inf:
-        return -np.inf
-    elif x == -np.inf:
-        return y
-    elif y == -np.inf:
-        return x
-    return np.logaddexp(x, y)
 
 def GenFeatures(x, y):
     sentence_len = len(x)
@@ -191,7 +82,7 @@ def GenFeatures(x, y):
         if j > 0:
             prev = y[j-1]
             curr = y[j]
-            feature[prev*48+curr] += 1
+            feature[2304+prev*48+curr] += 1
     return feature
 
 def SaveModel(weight, filename):
@@ -253,16 +144,11 @@ if __name__ == '__main__':
     epoch = 0
     max_epochs = args.epochs
     learning_rate = np.full((2*48*48), args.learning_rate, float)
-    #learning_rate[2304:4608] /= 9.
     batch_size = args.batch_size
     print >> sys.stderr, ('learning rate: %f' % args.learning_rate)
     print >> sys.stderr, ('batch size: %i' % batch_size)
     dev_accs = []
 
-    # for saving model
-    first = -1.
-    second = -1.
-    third = -1.
     # set keyboard interrupt handler
     signal.signal(signal.SIGINT, InterruptHandler)
     # set shutdown handler
@@ -288,6 +174,7 @@ if __name__ == '__main__':
         # stochastic gradient descent
         j = 0
         pre_per = 0
+        changed = 0
         for i in training_index:
             # print epoch percentage
             per = float(j)/train_len * 100
@@ -296,37 +183,23 @@ if __name__ == '__main__':
             j += 1
             if per - pre_per >= 1:
                 pre_per += 1
-                if pre_per % 25 == 0:
-                    dev_error = 0
-                    for k in range(len(dev_idx)):
-                        if k == len(dev_idx) - 1:
-                            sentence_len_dev = len(dev_x) - dev_idx[k]
-                        else:
-                            sentence_len_dev = dev_idx[k+1] - dev_idx[k]
-                        labels = dev_y[ dev_idx[k]:(dev_idx[k]+sentence_len_dev) ]
-                        y_pred = ViterbiDecode(weight, dev_x[ dev_idx[k]:(dev_idx[k]+sentence_len_dev) ],
-                                                    sentence_len_dev)
-                        dev_error += np.count_nonzero(labels!=y_pred)
-                    # calculate dev accuracy
-                    dev_acc = float(len(dev_x) - dev_error)/len(dev_x)
-                    sys.stdout.write('\n')
-                    print "Dev accuracy: %f" % dev_acc
-                    print "Total time: %f" % (time.time()-start_time)
 
             if i == len(training_index) - 1:
                 sentence_len = len(train_x) - train_idx[i]
             else:
                 sentence_len = train_idx[i+1] - train_idx[i]
             feature = features[i]
-            weight = GradientAscent(weight, train_x[ train_idx[i]:(train_idx[i]+sentence_len) ],
+            new_weight = GradientAscent(weight, train_x[ train_idx[i]:(train_idx[i]+sentence_len) ],
                                     feature, sentence_len, learning_rate)
-
             '''
             print '='*20
             for k in range(4608):
-                print '#%i: %f' % (k, weight[k])
+                print '#%i: %f' % (k, new_weight[k])
             print '='*20
             '''
+            if not np.array_equal(new_weight, weight):
+                weight = new_weight
+                changed += 1
             if math.isnan(weight[0]) or math.isnan(weight[4607]):
                 print >> sys.stdout, "Epoch #%i: nan error!!!" % epoch
                 print >> sys.stderr, "Epoch #%i: nan error!!!" % epoch
@@ -341,6 +214,7 @@ if __name__ == '__main__':
             '''
         sys.stdout.write("\rEpoch percentage: " + "|"*100 + " 100.00%\n")
         sys.stdout.flush()
+        print 'Weight updated %i times' % changed
 
         # testing validation
         dev_error = 0
@@ -358,22 +232,9 @@ if __name__ == '__main__':
         dev_accs.append(dev_acc)
         print "Dev accuracy: %f" % dev_acc
         print "Total time: %f" % (time.time()-start_time)
-        # save weights if dev accuracy is increasing
-        if dev_acc > first:
-            print("!!!!!!!!!!FIRST!!!!!!!!!!")
-            third = second
-            second = first
-            first = dev_acc
-            SaveModel(weight, args.model_out + '.1')
-        elif dev_acc > second:
-            print("!!!!!!!!!!SECOND!!!!!!!!!!")
-            third = second
-            second = dev_acc
-            SaveModel(weight, args.model_out + '.2')
-        elif dev_acc > third:
-            print("!!!!!!!!!!THIRD!!!!!!!!!!")
-            third = dev_acc
-            SaveModel(weight, args.model_out + '.3')
+        if changed == 0:
+            SaveModel(weight, args.model_out + '.finished')
+            break
 
     print "==============================="
     print 'Training Finished'
