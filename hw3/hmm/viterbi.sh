@@ -12,4 +12,5 @@ log_dir=log
 
 
 THEANO_FLAGS=device=cpu python2 -u viterbi.py --weight $2 \
-    $data_dir/3lyr_4096nrn_1188in_prob_fixed $data_dir/hmm.mdl $1
+    $data_dir/3lyr_4096nrn_1188in_prob_fixed $data_dir/hmm.mdl \
+    $data_dir/48_39.map $1

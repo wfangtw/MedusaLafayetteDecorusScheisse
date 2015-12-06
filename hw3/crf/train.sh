@@ -6,7 +6,7 @@ if [ $# -ne 1 ]; then
 	exit 1;
 fi
 
-learning_rate=0.01
+learning_rate=0.02
 epochs=200
 
 python2 train.py ../data/features.crf.train.cp ../data/3lyr_4096nrn_1188in_prob_fixed.prb.dev \

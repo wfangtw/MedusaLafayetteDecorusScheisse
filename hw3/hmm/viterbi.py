@@ -1,3 +1,9 @@
+#########################################################
+#   FileName:       [ viterbi.py ]                      #
+#   PackageName:    [ HMM ]                             #
+#   Synopsis:       [ Test HMM model ]                  #
+#   Author:         [ MedusaLafayetteDecorusSchiesse ]  #
+#########################################################
 import sys
 import time
 import cPickle
@@ -15,6 +21,8 @@ parser.add_argument('test_in', type=str, metavar='<test-in>',
 					help='testing data file name')
 parser.add_argument('hmm_model_in', type=str, metavar='<hmm-model-in>',
 					help='the hmm model stored with cPickle')
+parser.add_argument('phone_map', type=str, metavar='<48-39.map>',
+                                        help='48_39.map')
 parser.add_argument('prediction_out', type=str, metavar='<pred-out>',
 					help='the output file name you want for the output predictions')
 args = parser.parse_args()
@@ -29,8 +37,8 @@ def LoadData(filename, load_type):
         return data_x, test_id
 
 start_time = time.time()
-print("===============================")
-print("Loading test data...")
+#print("===============================")
+#print("Loading test data...")
 test_x1, test_id = LoadData(args.test_in + '_1.prb.test','test')
 test_x2, test_id2 = LoadData(args.test_in + '_2.prb.test','test')
 y = np.append(test_x1, test_x2, axis=0)
@@ -48,7 +56,7 @@ trans2 = np.log(trans2)
 init = np.zeros(48)
 init[36] = 1
 init = np.log(init)
-print "Total time: %f" % (time.time()-start_time)
+#print "Total time: %f" % (time.time()-start_time)
 
 def ViterbiDecode(prob, nframes):
     global init
@@ -82,7 +90,7 @@ def ViterbiDecode(prob, nframes):
     pred.reverse()
     return pred
 
-f = open('../../hw1/data/phones/48_39.map','r')
+f = open(args.phone_map,'r')
 phone_map = {}
 i = 0
 for l in f:
@@ -94,10 +102,10 @@ f = open(args.prediction_out,'w')
 f.write('Id,Prediction\n')
 
 # Viterbi decoding
-print("Viterbi decoding...")
+#print("Viterbi decoding...")
 current_idx = 0
 while current_idx < len(test_id):
-    print current_idx
+    #print current_idx
     s_id = test_id[current_idx].rsplit('_',1)[0]
     sentence_len = int(amount[s_id])
     pred = ViterbiDecode(np.log(y[current_idx : (current_idx + sentence_len)]), sentence_len)
@@ -108,7 +116,7 @@ while current_idx < len(test_id):
 f.close()
 
 
-print("===============================")
-print("Total time: " + str(time.time()-start_time))
+#print("===============================")
+#print("Total time: " + str(time.time()-start_time))
 print >> sys.stderr, "Total time: %f" % (time.time()-start_time)
-print("===============================")
+#print("===============================")

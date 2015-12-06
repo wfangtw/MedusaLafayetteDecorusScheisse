@@ -65,31 +65,20 @@ def ViterbiDecode(weight, prob, nframes):
 
 def GradientAscent(weight, x, feature, sentence_len, learning_rate):
     psi = ForwardBackward(weight, x, sentence_len)
-    #print '='*20
-    #for i in range(4608):
-        #print '#%i: %f, %f' % (i, psi[i], feature[i])
-    #print psi[0:2304].sum(), psi[2304:4608].sum()
-    #print feature[0:2304].sum(), feature[2304:4608].sum()
-    #print '='*20
-    #print weight
     return ( weight + learning_rate * (feature - psi) )
 
 def ForwardBackward(weight, prob, nframes):
     global init
     trans = np.reshape(weight[2304:4608], (48, 48)).T
-    #trans = np.log(trans)
     alpha = np.zeros_like(prob, float)
     beta = np.zeros_like(prob, float)
     emission_prob = np.dot(prob, np.reshape(weight[0:2304], (48, 48)).T)
-    #print emission_prob
 
     #forward
     alpha[0] = emission_prob[0] + init
     for i in range(1, nframes):
         x = alpha[i-1] + trans
         alpha[i] = emission_prob[i] + Sum(x)
-    #print 'alpha...'
-    #print alpha
     if math.isnan(alpha[nframes-1][0]) or math.isnan(alpha[0][0]):
         print >> sys.stdout, "Alpha: nan error!!!"
         print >> sys.stderr, "Alpha: nan error!!!"
@@ -99,8 +88,6 @@ def ForwardBackward(weight, prob, nframes):
     for i in reversed(range(0, nframes-1)):
         x = beta[i+1] + trans.T + emission_prob[i+1]
         beta[i] = Sum(x)
-    #print 'beta...'
-    #print beta
     if math.isnan(beta[0][0]):
         print >> sys.stdout, "Beta: nan error!!!"
         print >> sys.stderr, "Beta: nan error!!!"
@@ -110,16 +97,12 @@ def ForwardBackward(weight, prob, nframes):
     gamma = alpha + beta
     for i in range(nframes):
         gamma[i] = gamma[i] - SumProb(gamma[i], 1)
-    #print 'alpha beta....'
-    #print alpha_beta
 
     #epsilon
     epsilon = np.zeros((nframes, 48, 48), float)
     for i in range(nframes - 1):
         epsilon[i] = (alpha[i] + trans) + emission_prob[i+1].T + beta[i+1].T
         epsilon[i] = epsilon[i] - SumProb(epsilon[i], 2)
-    #print 'epsilon'
-    #print epsilon
     if math.isnan(epsilon[nframes-1][0][0]) or math.isnan(epsilon[0][0][0]):
         print >> sys.stdout, "Epsilon: nan error!!!"
         print >> sys.stderr, "Epsilon: nan error!!!"
@@ -133,11 +116,7 @@ def ForwardBackward(weight, prob, nframes):
             psi[48*j:48*(j+1)] += np.exp(gamma[i][j]) * prob[i]
     # 2304 ~ 4607
     new_trans = np.sum(np.exp(epsilon[0:(nframes-1)]), axis=0)
-    #print 'new_trans'
-    #print new_trans
     psi[2304:4608] = np.reshape(new_trans.T, (2304))
-    #print 'psi...'
-    #print psi
     if math.isnan(psi[0]) or math.isnan(psi[4607]):
         print >> sys.stdout, "Psi: nan error!!!"
         print >> sys.stderr, "Psi: nan error!!!"
@@ -182,17 +161,6 @@ def AddLogProb(x, y):
     elif y == -np.inf:
         return x
     return np.logaddexp(x, y)
-
-def GenFeatures(x, y):
-    sentence_len = len(x)
-    feature = np.zeros((48*48*2), float)
-    for j in range(sentence_len):
-        feature[y[j]*48:(y[j]+1)*48] += x[j]
-        if j > 0:
-            prev = y[j-1]
-            curr = y[j]
-            feature[prev*48+curr] += 1
-    return feature
 
 def SaveModel(weight, filename):
     with open(filename, 'w') as f:
@@ -321,24 +289,10 @@ if __name__ == '__main__':
             weight = GradientAscent(weight, train_x[ train_idx[i]:(train_idx[i]+sentence_len) ],
                                     feature, sentence_len, learning_rate)
 
-            '''
-            print '='*20
-            for k in range(4608):
-                print '#%i: %f' % (k, weight[k])
-            print '='*20
-            '''
             if math.isnan(weight[0]) or math.isnan(weight[4607]):
                 print >> sys.stdout, "Epoch #%i: nan error!!!" % epoch
                 print >> sys.stderr, "Epoch #%i: nan error!!!" % epoch
                 sys.exit()
-            '''
-            with open('blah2', 'a') as f:
-                for i in range(96):
-                    for j in range(48):
-                        f.write('%.2f ' % weight[48*i+j])
-                    f.write('\n')
-                f.write('\n')
-            '''
         sys.stdout.write("\rEpoch percentage: " + "|"*100 + " 100.00%\n")
         sys.stdout.flush()
 
