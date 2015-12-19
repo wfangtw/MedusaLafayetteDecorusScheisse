@@ -112,8 +112,8 @@ def GetImagesMatrix(img_ids, img_map, vgg_features):
     batch_size = len(img_ids)
     n_dim = vgg_features.shape[0]
     image_matrix = np.zeros((batch_size, n_dim), float)
-    for j in xrange(len(img_ids)):
-        imge_matrix[j,:] = vgg_features[:img_map[img_ids[j]]]
+    for j in range(len(img_ids)):
+        image_matrix[j,:] = vgg_features[:,img_map[img_ids[j]]]
     return image_matrix
 
 def GetQuestionsTensor(questions, word_embedding, word_map):
@@ -121,13 +121,13 @@ def GetQuestionsTensor(questions, word_embedding, word_map):
     # output:
     #     a numpy ndarray of shape: (batch_size, timesteps, word_vec_dim)
     batch_size = len(questions)
-    timesteps = FindQuestionMaxLen(questions)
+    timesteps = FindQuestionsMaxLen(questions)
     word_vec_dim = 300
     questions_tensor = np.zeros((batch_size, timesteps, word_vec_dim), float)
     for i in range(len(questions)):
         tokens = questions[i]
         for j in range(len(tokens)):
-            feature = GetWordFeature(tokens[j])
+            feature = GetWordFeature(tokens[j], word_embedding, word_map)
             if j < timesteps:
                 questions_tensor[i,j,:] = feature
     return questions_tensor

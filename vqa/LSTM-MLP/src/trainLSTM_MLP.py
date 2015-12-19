@@ -140,7 +140,7 @@ def main():
     train_question_batches = [ b for b in MakeBatches(train_questions, args.batch_size, fillvalue=train_questions[-1]) ]
     train_answer_batches = [ b for b in MakeBatches(train_answers['toks'], args.batch_size, fillvalue=train_answers['toks'][-1]) ]
     train_image_batches = [ b for b in MakeBatches(train_image_ids, args.batch_size, fillvalue=train_image_ids[-1]) ]
-    train_indices = list(range(len(train_questions_batches)))
+    train_indices = list(range(len(train_question_batches)))
 
     # validation batches
     dev_question_batches = [ b for b in MakeBatches(dev_questions, args.batch_size, fillvalue=dev_questions[-1]) ]
@@ -159,7 +159,7 @@ def main():
 
     print('Training started...')
     for k in range(args.num_epochs):
-        print('Epoch %i' % k, file=sys.stderr)
+        print('Epoch %i' % (k+1), file=sys.stderr)
         progbar = generic_utils.Progbar(len(train_questions))
         # shuffle batch indices
         random.shuffle(train_indices)
@@ -168,10 +168,11 @@ def main():
             X_image_batch = GetImagesMatrix(train_image_batches[i], img_map, VGG_features)
             Y_answer_batch = GetAnswersMatrix(train_answer_batches[i], word_embedding, word_map)
             loss = model.train_on_batch([X_question_batch, X_image_batch], Y_answer_batch)
+            loss = loss[0].tolist()
             progbar.add(args.batch_size, values=[('train loss', loss)])
 
-            if k % args.model_save_interval == 0:
-                model.save_weights(model_file_name + '_epoch_{:03d}.hdf5'.format(k))
+        if k % args.model_save_interval == 0:
+            model.save_weights(model_filename + '_epoch_{:03d}.hdf5'.format(k+1))
 
         # evaluate on dev set
         widgets = ['Evaluating ', Percentage(), ' ', Bar(marker='#',left='[',right=']'), ' ', ETA()]
@@ -203,7 +204,7 @@ def main():
         print('Time: %f s' % (time.time()-start_time))
         print('Time: %f s' % (time.time()-start_time), file=sys.stderr)
 
-    model.save_weights(model_file_name + '_epoch_{:03d}.hdf5'.format(k))
+    model.save_weights(model_filename + '_epoch_{:03d}.hdf5'.format(k+1))
     print(dev_accs, file=sys.stderr)
     print('Training finished.')
     print('Training finished.', file=sys.stderr)
