@@ -37,65 +37,18 @@ def main():
     args = parser.parse_args()
 
     word_vec_dim = 300
-    img_dim = 4096
-    max_len = 30
     batch_size = 128
 
-    lstm_hidden_layers = 1
-    lstm_hidden_units = 512
-    mlp_hidden_layers = 3
-    mlp_hidden_units = 1024
-    dropout = 0.5
-    mlp_activation = 'tanh'
-    '''
     #######################
     #      Load Model     #
     #######################
-    # image model (CNN features)
-    image_model = Sequential()
-    image_model.add(Reshape(
-        input_shape=(img_dim,), dims=(img_dim,)
-        ))
-
-    # language model (LSTM)
-    language_model = Sequential()
-    if lstm_hidden_layers == 1:
-        language_model.add(LSTM(
-            output_dim=lstm_hidden_units, return_sequences=False, input_shape=(max_len, word_vec_dim)
-            ))
-    else:
-        language_model.add(LSTM(
-            output_dim=lstm_hidden_units, return_sequences=True, input_shape=(max_len, word_vec_dim)
-            ))
-        for i in range(lstm_hidden_layers-2):
-            language_model.add(LSTM(
-                output_dim=lstm_hidden_units, return_sequences=True
-                ))
-        language_model.add(LSTM(
-            output_dim=lstm_hidden_units, return_sequences=False
-            ))
-
-    # feedforward model (MLP)
-    model = Sequential()
-    model.add(Merge(
-        [language_model, image_model], mode='concat', concat_axis=1
-        ))
-    for i in range(mlp_hidden_layers):
-        model.add(Dense(
-            mlp_hidden_units, init='uniform'
-            ))
-        model.add(Activation(mlp_activation))
-        model.add(Dropout(dropout))
-    model.add(Dense(word_vec_dim))
-    model.add(Activation('softmax'))
 
     print('Loading model and weights...')
-    #model = model_from_json(open(args.model,'r').read())
+    model = model_from_json(open(args.model,'r').read())
     model.compile(loss='categorical_crossentropy', optimizer='rmsprop')
     model.load_weights(args.weights)
     print('Model and weights loaded.')
     print('Time: %f s' % (time.time()-start_time))
-    '''
 
     ######################
     #      Load Data     #
@@ -105,8 +58,6 @@ def main():
 
     dev_id_pairs, dev_image_ids = LoadIds('dev')
     #test_id_pairs, test_image_ids = LoadIds('test')
-    print(len(dev_id_pairs))
-    sys.exit(0)
 
     dev_questions = LoadQuestions('dev')
     #test_questions = LoadQuestions('test')
