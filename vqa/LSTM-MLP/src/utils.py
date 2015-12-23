@@ -8,6 +8,8 @@
 import numpy as np
 import scipy.io as sio
 import joblib
+import signal
+import sys
 from itertools import zip_longest
 
 #########################
@@ -97,6 +99,25 @@ def LoadGloVe():
             i += 1
     return word_embedding, word_map
 
+def SavePredictions(filepath, predictions, id_pairs):
+    with open(filepath, 'w') as f:
+        f.write('q_id,ans\n')
+        for i in range(len(id_pairs)):
+            qid = id_pairs[i][1]
+            pred = predictions[i]
+            if pred == 1:
+                ans = 'A'
+            elif pred == 2:
+                ans = 'B'
+            elif pred == 3:
+                ans = 'C'
+            elif pred == 4:
+                ans = 'D'
+            else:
+                ans = 'E'
+            f.write('%07i,%s\n' % (qid, ans))
+
+
 ############################
 #     Getting Features     #
 ############################
@@ -146,7 +167,7 @@ def GetAnswersMatrix(answers, word_embedding, word_map):
 def GetChoicesTensor(choices, word_embedding, word_map):
     # output:
     #     a numpy array of shape (5, batch_size, word_vec_dim)
-    batch_size = len(answers)
+    batch_size = len(choices)
     features = np.zeros((5, batch_size, 300), float)
     for j in range(5):
         for i in range(batch_size):
@@ -177,3 +198,8 @@ def FindQuestionsMaxLen(questions):
         if len(question) > max_len:
             max_len = len(question)
     return max_len
+
+def InterruptHandler(sig, frame):
+    print(str(sig), file=sys.stderr)
+    print(str(sig))
+    sys.exit(-1)

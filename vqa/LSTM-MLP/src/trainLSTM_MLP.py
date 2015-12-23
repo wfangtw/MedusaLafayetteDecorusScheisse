@@ -7,11 +7,13 @@
 
 import numpy as np
 import scipy.io as sio
-from scipy.spatial.distance import cdist
+#from scipy.spatial.distance import cdist
+from sklearn.metrics.pairwise import cosine_similarity
 import sys
 import argparse
 import joblib
 import time
+import signal
 import random
 from progressbar import Bar, ETA, Percentage, ProgressBar
 
@@ -21,10 +23,13 @@ from keras.layers.recurrent import LSTM
 from keras.utils import generic_utils
 #from keras.callbacks import ModelCheckpoint, RemoteMonitor
 
-from utils import  LoadIds, LoadQuestions, LoadAnswers, LoadChoices, LoadVGGFeatures, LoadGloVe, GetImagesMatrix, GetQuestionsTensor, GetAnswersMatrix, GetChoicesTensor, MakeBatches
+from utils import  LoadIds, LoadQuestions, LoadAnswers, LoadChoices, LoadVGGFeatures, LoadGloVe, GetImagesMatrix, GetQuestionsTensor, GetAnswersMatrix, GetChoicesTensor, MakeBatches, InterruptHandler
 
 def main():
     start_time = time.time()
+    signal.signal(signal.SIGINT, InterruptHandler)
+    #signal.signal(signal.SIGKILL, InterruptHandler)
+    signal.signal(signal.SIGTERM, InterruptHandler)
 
     parser = argparse.ArgumentParser(prog='trainLSTM_MLP.py',
             description='Train LSTM-MLP model for visual question answering')
@@ -62,6 +67,20 @@ def main():
 
     print('Finished loading data.')
     print('Time: %f s' % (time.time()-start_time))
+
+    print('-'*100, file=sys.stderr)
+    print('Training Information', file=sys.stderr)
+    print('# of LSTM hidden units: %i' % args.lstm_hidden_units, file=sys.stderr)
+    print('# of LSTM hidden layers: %i' % args.lstm_hidden_layers, file=sys.stderr)
+    print('# of MLP hidden units: %i' % args.mlp_hidden_units, file=sys.stderr)
+    print('# of MLP hidden layers: %i' % args.mlp_hidden_layers, file=sys.stderr)
+    print('Dropout: %f' % args.dropout, file=sys.stderr)
+    print('MLP activation function: %s' % args.mlp_activation, file=sys.stderr)
+    print('# of training epochs: %i' % args.num_epochs, file=sys.stderr)
+    print('Batch size: %i' % args.batch_size, file=sys.stderr)
+    print('# of train questions: %i' % len(train_questions), file=sys.stderr)
+    print('# of dev questions: %i' % len(dev_questions), file=sys.stderr)
+    print('-'*100, file=sys.stderr)
 
     ######################
     # Model Descriptions #
@@ -151,16 +170,21 @@ def main():
     print('Finished making batches.')
     print('Time: %f s' % (time.time()-start_time))
 
+
     ######################
     #      Training      #
     ######################
 
     dev_accs = []
+    max_acc = -1
+    max_acc_epoch = -1
 
     print('Training started...')
     for k in range(args.num_epochs):
         print('Epoch %i' % (k+1), file=sys.stderr)
-        progbar = generic_utils.Progbar(len(train_questions))
+        print('-'*80)
+        print('Epoch %i' % (k+1))
+        progbar = generic_utils.Progbar(len(train_indices)*args.batch_size)
         # shuffle batch indices
         random.shuffle(train_indices)
         for i in train_indices:
@@ -172,11 +196,11 @@ def main():
             progbar.add(args.batch_size, values=[('train loss', loss)])
 
         if k % args.model_save_interval == 0:
-            model.save_weights(model_filename + '_epoch_{:03d}.hdf5'.format(k+1))
+            model.save_weights(model_filename + '_epoch_{:03d}.hdf5'.format(k+1), overwrite=True)
 
         # evaluate on dev set
         widgets = ['Evaluating ', Percentage(), ' ', Bar(marker='#',left='[',right=']'), ' ', ETA()]
-        pbar = ProgressBar(widgets=widgets)
+        pbar = ProgressBar(widgets=widgets,redirect_stdout=True)
 
         dev_correct = 0
 
@@ -188,12 +212,12 @@ def main():
 
             # get word vecs of choices
             choice_feats = GetChoicesTensor(dev_choice_batches[i], word_embedding, word_map)
-            distance = np.zeros((5, args.batch_size), float)
+            similarity = np.zeros((5, args.batch_size), float)
             # calculate cosine distances
             for j in range(5):
-                distance[j] = cdist(prob, choice_feats[j], 'cosine')
+                similarity[j] = np.diag(cosine_similarity(prob, choice_feats[j]))
             # take argmax of cosine distances
-            pred = np.argmax(distance, axis=0) + 1
+            pred = np.argmax(similarity, axis=0) + 1
 
             dev_correct += np.count_nonzero(dev_answer_batches[i]==pred)
 
@@ -204,8 +228,14 @@ def main():
         print('Time: %f s' % (time.time()-start_time))
         print('Time: %f s' % (time.time()-start_time), file=sys.stderr)
 
+        if dev_acc > max_acc:
+            max_acc = dev_acc
+            max_acc_epoch = k
+            model.save_weights(model_filename + '_best.hdf5', overwrite=True)
+
     model.save_weights(model_filename + '_epoch_{:03d}.hdf5'.format(k+1))
     print(dev_accs, file=sys.stderr)
+    print('Best validation accuracy: epoch#%i' % max_acc_epoch)
     print('Training finished.')
     print('Training finished.', file=sys.stderr)
     print('Time: %f s' % (time.time()-start_time))
