@@ -8,7 +8,6 @@
 import numpy as np
 import scipy.io as sio
 import joblib
-import signal
 import sys
 from itertools import zip_longest
 
@@ -89,7 +88,7 @@ def LoadGloVe():
     # output:
     #     word_embedding: a numpy array of shape (n_words, word_vec_dim), where n_words = 2196017 and word_vec_dim = 300
     #     word_map: a dictionary that maps words (strings) to their indices in the word embedding matrix (word_embedding)
-    word_embedding = joblib.load('/home/mlds/data/glove.840B.emb')
+    word_embedding = joblib.load('/home/mlds/data/glove.840B.float32.emb')
     word_map = {}
     with open('/home/mlds/data/vocab.txt', 'r', encoding='utf-8') as f:
         i = 0
@@ -198,8 +197,3 @@ def FindQuestionsMaxLen(questions):
         if len(question) > max_len:
             max_len = len(question)
     return max_len
-
-def InterruptHandler(sig, frame):
-    print(str(sig), file=sys.stderr)
-    print(str(sig))
-    sys.exit(-1)

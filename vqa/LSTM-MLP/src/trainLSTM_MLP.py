@@ -23,7 +23,17 @@ from keras.layers.recurrent import LSTM
 from keras.utils import generic_utils
 #from keras.callbacks import ModelCheckpoint, RemoteMonitor
 
-from utils import  LoadIds, LoadQuestions, LoadAnswers, LoadChoices, LoadVGGFeatures, LoadGloVe, GetImagesMatrix, GetQuestionsTensor, GetAnswersMatrix, GetChoicesTensor, MakeBatches, InterruptHandler
+from utils import  LoadIds, LoadQuestions, LoadAnswers, LoadChoices, LoadVGGFeatures, LoadGloVe, GetImagesMatrix, GetQuestionsTensor, GetAnswersMatrix, GetChoicesTensor, MakeBatches
+
+def InterruptHandler(sig, frame):
+    print(str(sig), file=sys.stderr)
+    print(str(sig))
+    PrintDevAcc()
+    sys.exit(-1)
+
+def PrintDevAcc():
+    print('Max validation accuracy epoch: %i' % max_acc_epoch, file=sys.stderr)
+    print(dev_accs, file=sys.stderr)
 
 def main():
     start_time = time.time()
@@ -125,7 +135,7 @@ def main():
     model.add(Activation('softmax'))
 
     json_string = model.to_json()
-    model_filename = 'models/lstm_units_%i_layers_%i_mlp_units_%i_layers_%i' % (args.lstm_hidden_units, args.lstm_hidden_layers, args.mlp_hidden_units, args.mlp_hidden_layers)
+    model_filename = 'models/lstm_units_%i_layers_%i_mlp_units_%i_layers_%i_%s' % (args.lstm_hidden_units, args.lstm_hidden_layers, args.mlp_hidden_units, args.mlp_hidden_layers, args.mlp_activation)
     open(model_filename + '.json', 'w').write(json_string)
 
     # loss and optimizer

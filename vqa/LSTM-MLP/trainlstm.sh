@@ -5,11 +5,11 @@ mlp_layers=3
 lstm_units=512
 lstm_layers=1
 dropout=0.5
-activation='tanh'
+activation='relu'
 epochs=100
 batch_size=128
 
-log=$(printf 'lstm_units_%i_layers_%i_mlp_units_%i_layers_%i.log' "$lstm_units" "$lstm_layers" "$mlp_units" "$mlp_layers")
+log=$(printf 'lstm_units_%i_layers_%i_mlp_units_%i_layers_%i_%s.log' "$lstm_units" "$lstm_layers" "$mlp_units" "$mlp_layers" "$activation")
 echo $log
 
 python src/trainLSTM_MLP.py \
