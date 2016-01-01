@@ -7,7 +7,6 @@
 
 import numpy as np
 import scipy.io as sio
-#from scipy.spatial.distance import cdist
 from sklearn.metrics.pairwise import cosine_similarity
 import sys
 import argparse
@@ -21,25 +20,12 @@ from keras.models import Sequential
 from keras.layers.core import Dense, Activation, Merge, Dropout, Reshape
 from keras.layers.recurrent import LSTM
 from keras.utils import generic_utils
-#from keras.callbacks import ModelCheckpoint, RemoteMonitor
+from keras.optimizers import RMSprop
 
 from utils import  LoadIds, LoadQuestions, LoadAnswers, LoadChoices, LoadVGGFeatures, LoadGloVe, GetImagesMatrix, GetQuestionsTensor, GetAnswersMatrix, GetChoicesTensor, MakeBatches
 
-def InterruptHandler(sig, frame):
-    print(str(sig), file=sys.stderr)
-    print(str(sig))
-    PrintDevAcc()
-    sys.exit(-1)
-
-def PrintDevAcc():
-    print('Max validation accuracy epoch: %i' % max_acc_epoch, file=sys.stderr)
-    print(dev_accs, file=sys.stderr)
-
 def main():
     start_time = time.time()
-    signal.signal(signal.SIGINT, InterruptHandler)
-    #signal.signal(signal.SIGKILL, InterruptHandler)
-    signal.signal(signal.SIGTERM, InterruptHandler)
 
     parser = argparse.ArgumentParser(prog='trainLSTM_MLP.py',
             description='Train LSTM-MLP model for visual question answering')
@@ -52,6 +38,7 @@ def main():
     parser.add_argument('--num-epochs', type=int, default=100, metavar='<num-epochs>')
     parser.add_argument('--model-save-interval', type=int, default=5, metavar='<interval>')
     parser.add_argument('--batch-size', type=int, default=128, metavar='<batch-size>')
+    parser.add_argument('--learning-rate', type=float, default=0.001, metavar='<learning-rate>')
     args = parser.parse_args()
 
     word_vec_dim = 300
@@ -88,13 +75,29 @@ def main():
     print('MLP activation function: %s' % args.mlp_activation, file=sys.stderr)
     print('# of training epochs: %i' % args.num_epochs, file=sys.stderr)
     print('Batch size: %i' % args.batch_size, file=sys.stderr)
+    print('Learning rate: %f' % args.learning_rate, file=sys.stderr)
     print('# of train questions: %i' % len(train_questions), file=sys.stderr)
     print('# of dev questions: %i' % len(dev_questions), file=sys.stderr)
     print('-'*100, file=sys.stderr)
+    print('-'*80)
+    print('Training Information')
+    print('# of LSTM hidden units: %i' % args.lstm_hidden_units)
+    print('# of LSTM hidden layers: %i' % args.lstm_hidden_layers)
+    print('# of MLP hidden units: %i' % args.mlp_hidden_units)
+    print('# of MLP hidden layers: %i' % args.mlp_hidden_layers)
+    print('Dropout: %f' % args.dropout)
+    print('MLP activation function: %s' % args.mlp_activation)
+    print('# of training epochs: %i' % args.num_epochs)
+    print('Batch size: %i' % args.batch_size)
+    print('Learning rate: %f' % args.learning_rate)
+    print('# of train questions: %i' % len(train_questions))
+    print('# of dev questions: %i' % len(dev_questions))
+    print('-'*80)
 
     ######################
     # Model Descriptions #
     ######################
+    print('Generating and compiling model...')
 
     # image model (CNN features)
     image_model = Sequential()
@@ -139,7 +142,8 @@ def main():
     open(model_filename + '.json', 'w').write(json_string)
 
     # loss and optimizer
-    model.compile(loss='categorical_crossentropy', optimizer='rmsprop')
+    rmsprop = RMSprop(lr=args.learning_rate)
+    model.compile(loss='categorical_crossentropy', optimizer=rmsprop)
     print('Compilation finished.')
     print('Time: %f s' % (time.time()-start_time))
 
@@ -189,6 +193,21 @@ def main():
     max_acc = -1
     max_acc_epoch = -1
 
+    # define interrupt handler
+    def PrintDevAcc():
+        print('Max validation accuracy epoch: %i' % max_acc_epoch, file=sys.stderr)
+        print(dev_accs, file=sys.stderr)
+
+    def InterruptHandler(sig, frame):
+        print(str(sig), file=sys.stderr)
+        print(str(sig))
+        PrintDevAcc()
+        sys.exit(-1)
+
+    signal.signal(signal.SIGINT, InterruptHandler)
+    signal.signal(signal.SIGTERM, InterruptHandler)
+
+    # start training
     print('Training started...')
     for k in range(args.num_epochs):
         print('Epoch %i' % (k+1), file=sys.stderr)
@@ -204,6 +223,7 @@ def main():
             loss = model.train_on_batch([X_question_batch, X_image_batch], Y_answer_batch)
             loss = loss[0].tolist()
             progbar.add(args.batch_size, values=[('train loss', loss)])
+        print('\nTime: %f s' % (time.time()-start_time))
 
         if k % args.model_save_interval == 0:
             model.save_weights(model_filename + '_epoch_{:03d}.hdf5'.format(k+1), overwrite=True)
@@ -229,7 +249,12 @@ def main():
             # take argmax of cosine distances
             pred = np.argmax(similarity, axis=0) + 1
 
-            dev_correct += np.count_nonzero(dev_answer_batches[i]==pred)
+            if i != (len(dev_question_batches)-1):
+                dev_correct += np.count_nonzero(dev_answer_batches[i]==pred)
+            else:
+                num_padding = args.batch_size * len(dev_question_batches) - len(dev_questions)
+                last_idx = args.batch_size - num_padding
+                dev_correct += np.count_nonzero(dev_answer_batches[:last_idx]==pred[:last_idx])
 
         dev_acc = float(dev_correct)/len(dev_questions)
         dev_accs.append(dev_acc)

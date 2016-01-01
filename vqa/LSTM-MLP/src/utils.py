@@ -89,6 +89,8 @@ def LoadGloVe():
     #     word_embedding: a numpy array of shape (n_words, word_vec_dim), where n_words = 2196017 and word_vec_dim = 300
     #     word_map: a dictionary that maps words (strings) to their indices in the word embedding matrix (word_embedding)
     word_embedding = joblib.load('/home/mlds/data/glove.840B.float32.emb')
+    unk = np.mean(word_embedding, axis=0)
+    word_embedding = np.vstack([word_embedding, unk])
     word_map = {}
     with open('/home/mlds/data/vocab.txt', 'r', encoding='utf-8') as f:
         i = 0
@@ -161,6 +163,9 @@ def GetAnswersMatrix(answers, word_embedding, word_map):
         tokens = answers[i]
         for tok in tokens:
             features[i] += GetWordFeature(tok, word_embedding, word_map)
+        # average or not?
+        if len(tokens) > 0:
+            features[i] /= len(tokens)
     return features
 
 def GetChoicesTensor(choices, word_embedding, word_map):
@@ -173,6 +178,9 @@ def GetChoicesTensor(choices, word_embedding, word_map):
             tokens = choices[i][j]
             for tok in tokens:
                 features[j][i] += GetWordFeature(tok, word_embedding, word_map)
+            # average or not?
+            if len(tokens) > 0:
+                features[j][i] /= len(tokens)
     return features
 
 ############################
@@ -188,7 +196,8 @@ def GetWordFeature(word, word_embedding, word_map):
     if word in word_map:
         feature = word_embedding[word_map[word]]
     else:
-        feature = np.mean(word_embedding, axis=0)
+        #feature = np.mean(word_embedding, axis=0)
+        feature = word_embedding[word_embedding.shape[0]-1]
     return feature
 
 def FindQuestionsMaxLen(questions):
