@@ -7,7 +7,6 @@
 
 import numpy as np
 import scipy.io as sio
-#from scipy.spatial.distance import cdist
 from sklearn.metrics.pairwise import cosine_similarity
 import sys
 import argparse
@@ -25,9 +24,6 @@ from utils import  LoadIds, LoadQuestions, LoadAnswers, LoadChoices, LoadVGGFeat
 
 def main():
     start_time = time.time()
-    #signal.signal(signal.SIGINT, InterruptHandler)
-    #signal.signal(signal.SIGKILL, InterruptHandler)
-    #signal.signal(signal.SIGTERM, InterruptHandler)
 
     parser = argparse.ArgumentParser(prog='testLSTM_MLP.py',
             description='Test LSTM-MLP model for visual question answering')
@@ -135,14 +131,9 @@ def main():
 
         #dev_correct += np.count_nonzero(dev_answer_batches[i]==pred)
 
-    #dev_acc = float(dev_correct)/len(dev_questions)
-    #print('Validation Accuracy: %f' % dev_acc)
-    #print('Validation Accuracy: %f' % dev_acc, file=sys.stderr)
     SavePredictions(args.output, predictions, test_id_pairs)
     print('Time: %f s' % (time.time()-start_time))
-    print('Time: %f s' % (time.time()-start_time), file=sys.stderr)
     print('Testing finished.')
-    print('Testing finished.', file=sys.stderr)
 
 if __name__ == "__main__":
     main()
