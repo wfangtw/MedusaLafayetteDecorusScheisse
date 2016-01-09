@@ -7,7 +7,7 @@
 
 import numpy as np
 import scipy.io as sio
-from sklearn.metrics.pairwise import cosine_similarity, pairwise_distances
+from sklearn.metrics.pairwise import cosine_similarity
 import sys
 import argparse
 import joblib
@@ -22,7 +22,7 @@ from keras.layers.recurrent import LSTM
 from keras.utils import generic_utils
 from keras.optimizers import RMSprop
 
-from utils import  LoadIds, LoadQuestions, LoadAnswers, LoadChoices, LoadVGGFeatures, LoadGloVe, GetImagesMatrix, GetQuestionsTensor, GetAnswersMatrix, GetChoicesTensor, MakeBatches
+from utils import  LoadIds, LoadQuestions, LoadAnswers, LoadChoices, LoadInceptionFeatures, LoadGloVe, GetImagesMatrix, GetQuestionsTensor, GetAnswersMatrix, GetChoicesTensor, MakeBatches
 
 def Loss(y_true, y_pred):
     norm_true = y_true.norm(2, axis=1)
@@ -48,7 +48,7 @@ def main():
     args = parser.parse_args()
 
     word_vec_dim = 300
-    img_dim = 4096
+    img_dim = 2048
     max_len = 30
     ######################
     #      Load Data     #
@@ -116,8 +116,7 @@ def main():
     #model.add(Activation('softmax'))
 
     json_string = model.to_json()
-    model_filename = 'models/vgg_lstm_units_%i_layers_%i_mlp_units_%i_layers_%i_%s_lr%.1e_dropout%.2f' % (args.lstm_hidden_units, args.lstm_hidden_layers, args.mlp_hidden_units, args.mlp_hidden_layers, args.mlp_activation, args.learning_rate, args.dropout)
-    #model_filename = 'models/vgg_lstm_units_%i_layers_%i_mlp_units_%i_layers_%i_%s_lr%.1e_dropout%.2f_loss_cosine' % (args.lstm_hidden_units, args.lstm_hidden_layers, args.mlp_hidden_units, args.mlp_hidden_layers, args.mlp_activation, args.learning_rate, args.dropout)
+    model_filename = 'models/inception_lstm_units_%i_layers_%i_mlp_units_%i_layers_%i_%s_lr%.1e_dropout%.2f' % (args.lstm_hidden_units, args.lstm_hidden_layers, args.mlp_hidden_units, args.mlp_hidden_layers, args.mlp_activation, args.learning_rate, args.dropout)
     open(model_filename + '.json', 'w').write(json_string)
 
     # loss and optimizer
@@ -131,10 +130,10 @@ def main():
     #  Load CNN Features and Word Vectors  #
     ########################################
 
-    # load VGG features
-    print('Loading VGG features...')
-    VGG_features, img_map = LoadVGGFeatures()
-    print('VGG features loaded')
+    # load Inception features
+    print('Loading Inception features...')
+    INC_features, img_map = LoadInceptionFeatures()
+    print('Inception features loaded')
     print('Time: %f s' % (time.time()-start_time))
 
     # load GloVe vectors
@@ -227,7 +226,7 @@ def main():
         random.shuffle(train_indices)
         for i in train_indices:
             X_question_batch = GetQuestionsTensor(train_question_batches[i], word_embedding, word_map)
-            X_image_batch = GetImagesMatrix(train_image_batches[i], img_map, VGG_features)
+            X_image_batch = GetImagesMatrix(train_image_batches[i], img_map, INC_features)
             Y_answer_batch = GetAnswersMatrix(train_answer_batches[i], word_embedding, word_map)
             loss = model.train_on_batch([X_question_batch, X_image_batch], Y_answer_batch)
             loss = loss[0].tolist()
@@ -239,10 +238,10 @@ def main():
 
         dev_correct = 0
 
-        # feed forward
+            # feed forward
         for i in range(len(dev_question_batches)):
             X_question_batch = GetQuestionsTensor(dev_question_batches[i], word_embedding, word_map)
-            X_image_batch = GetImagesMatrix(dev_image_batches[i], img_map, VGG_features)
+            X_image_batch = GetImagesMatrix(dev_image_batches[i], img_map, INC_features)
             prob = model.predict_proba([X_question_batch, X_image_batch], args.batch_size, verbose=0)
 
             # get word vecs of choices

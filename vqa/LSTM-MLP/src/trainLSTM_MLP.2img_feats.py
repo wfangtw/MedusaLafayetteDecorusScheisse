@@ -7,7 +7,7 @@
 
 import numpy as np
 import scipy.io as sio
-from sklearn.metrics.pairwise import cosine_similarity, pairwise_distances
+from sklearn.metrics.pairwise import cosine_similarity
 import sys
 import argparse
 import joblib
@@ -22,13 +22,7 @@ from keras.layers.recurrent import LSTM
 from keras.utils import generic_utils
 from keras.optimizers import RMSprop
 
-from utils import  LoadIds, LoadQuestions, LoadAnswers, LoadChoices, LoadVGGFeatures, LoadGloVe, GetImagesMatrix, GetQuestionsTensor, GetAnswersMatrix, GetChoicesTensor, MakeBatches
-
-def Loss(y_true, y_pred):
-    norm_true = y_true.norm(2, axis=1)
-    norm_pred = y_pred.norm(2, axis=1)
-    normalized_dot = (y_true*y_pred).sum(axis=1)/(norm_true*norm_pred)
-    return (1-normalized_dot).sum()
+from utils import  LoadIds, LoadQuestions, LoadAnswers, LoadChoices, LoadVGGFeatures, LoadInceptionFeatures, LoadGloVe, GetImagesMatrix, GetQuestionsTensor, GetAnswersMatrix, GetChoicesTensor, MakeBatches
 
 def main():
     start_time = time.time()
@@ -48,26 +42,26 @@ def main():
     args = parser.parse_args()
 
     word_vec_dim = 300
-    img_dim = 4096
+    vgg_img_dim = 4096
+    inc_img_dim = 2048
     max_len = 30
     ######################
     #      Load Data     #
     ######################
-    data_dir = '/home/mlds/data/0.05_val/'
 
     print('Loading data...')
 
-    train_id_pairs, train_image_ids = LoadIds('train', data_dir)
-    dev_id_pairs, dev_image_ids = LoadIds('dev', data_dir)
+    train_id_pairs, train_image_ids = LoadIds('train')
+    dev_id_pairs, dev_image_ids = LoadIds('dev')
 
-    train_questions = LoadQuestions('train', data_dir)
-    dev_questions = LoadQuestions('dev', data_dir)
+    train_questions = LoadQuestions('train')
+    dev_questions = LoadQuestions('dev')
 
-    train_choices = LoadChoices('train', data_dir)
-    dev_choices = LoadChoices('dev', data_dir)
+    train_choices = LoadChoices('train')
+    dev_choices = LoadChoices('dev')
 
-    train_answers = LoadAnswers('train', data_dir)
-    dev_answers = LoadAnswers('dev', data_dir)
+    train_answers = LoadAnswers('train')
+    dev_answers = LoadAnswers('dev')
 
     print('Finished loading data.')
     print('Time: %f s' % (time.time()-start_time))
@@ -77,10 +71,16 @@ def main():
     ######################
     print('Generating and compiling model...')
 
-    # image model (CNN features)
-    image_model = Sequential()
-    image_model.add(Reshape(
-        input_shape=(img_dim,), dims=(img_dim,)
+    # VGG model (VGG features)
+    vgg_model = Sequential()
+    vgg_model.add(Reshape(
+        input_shape=(vgg_img_dim,), dims=(vgg_img_dim,)
+        ))
+
+    # Inception model
+    inception_model = Sequential()
+    inception_model.add(Reshape(
+        input_shape=(inc_img_dim,), dims=(inc_img_dim,)
         ))
 
     # language model (LSTM)
@@ -104,7 +104,7 @@ def main():
     # feedforward model (MLP)
     model = Sequential()
     model.add(Merge(
-        [language_model, image_model], mode='concat', concat_axis=1
+        [language_model, vgg_model, inception_model], mode='concat', concat_axis=1
         ))
     for i in range(args.mlp_hidden_layers):
         model.add(Dense(
@@ -113,17 +113,15 @@ def main():
         model.add(Activation(args.mlp_activation))
         model.add(Dropout(args.dropout))
     model.add(Dense(word_vec_dim))
-    #model.add(Activation('softmax'))
+    model.add(Activation('softmax'))
 
     json_string = model.to_json()
-    model_filename = 'models/vgg_lstm_units_%i_layers_%i_mlp_units_%i_layers_%i_%s_lr%.1e_dropout%.2f' % (args.lstm_hidden_units, args.lstm_hidden_layers, args.mlp_hidden_units, args.mlp_hidden_layers, args.mlp_activation, args.learning_rate, args.dropout)
-    #model_filename = 'models/vgg_lstm_units_%i_layers_%i_mlp_units_%i_layers_%i_%s_lr%.1e_dropout%.2f_loss_cosine' % (args.lstm_hidden_units, args.lstm_hidden_layers, args.mlp_hidden_units, args.mlp_hidden_layers, args.mlp_activation, args.learning_rate, args.dropout)
+    model_filename = 'models/2feats_lstm_units_%i_layers_%i_mlp_units_%i_layers_%i_%s_lr%.1e_dropout%.1f' % (args.lstm_hidden_units, args.lstm_hidden_layers, args.mlp_hidden_units, args.mlp_hidden_layers, args.mlp_activation, args.learning_rate, args.dropout)
     open(model_filename + '.json', 'w').write(json_string)
 
     # loss and optimizer
     rmsprop = RMSprop(lr=args.learning_rate)
-    #model.compile(loss='categorical_crossentropy', optimizer=rmsprop)
-    model.compile(loss=Loss, optimizer=rmsprop)
+    model.compile(loss='categorical_crossentropy', optimizer=rmsprop)
     print('Compilation finished.')
     print('Time: %f s' % (time.time()-start_time))
 
@@ -133,8 +131,14 @@ def main():
 
     # load VGG features
     print('Loading VGG features...')
-    VGG_features, img_map = LoadVGGFeatures()
+    VGG_features, vgg_img_map = LoadVGGFeatures()
     print('VGG features loaded')
+    print('Time: %f s' % (time.time()-start_time))
+
+    # load Inception features
+    print('Loading Inception features...')
+    INC_features, inc_img_map = LoadInceptionFeatures()
+    print('Inception features loaded')
     print('Time: %f s' % (time.time()-start_time))
 
     # load GloVe vectors
@@ -227,9 +231,10 @@ def main():
         random.shuffle(train_indices)
         for i in train_indices:
             X_question_batch = GetQuestionsTensor(train_question_batches[i], word_embedding, word_map)
-            X_image_batch = GetImagesMatrix(train_image_batches[i], img_map, VGG_features)
+            X_vgg_image_batch = GetImagesMatrix(train_image_batches[i], vgg_img_map, VGG_features)
+            X_inc_image_batch = GetImagesMatrix(train_image_batches[i], inc_img_map, INC_features)
             Y_answer_batch = GetAnswersMatrix(train_answer_batches[i], word_embedding, word_map)
-            loss = model.train_on_batch([X_question_batch, X_image_batch], Y_answer_batch)
+            loss = model.train_on_batch([X_question_batch, X_vgg_image_batch, X_inc_image_batch], Y_answer_batch)
             loss = loss[0].tolist()
             progbar.add(args.batch_size, values=[('train loss', loss)])
         print('Time: %f s' % (time.time()-start_time))
@@ -239,11 +244,12 @@ def main():
 
         dev_correct = 0
 
-        # feed forward
+            # feed forward
         for i in range(len(dev_question_batches)):
             X_question_batch = GetQuestionsTensor(dev_question_batches[i], word_embedding, word_map)
-            X_image_batch = GetImagesMatrix(dev_image_batches[i], img_map, VGG_features)
-            prob = model.predict_proba([X_question_batch, X_image_batch], args.batch_size, verbose=0)
+            X_vgg_image_batch = GetImagesMatrix(dev_image_batches[i], vgg_img_map, VGG_features)
+            X_inc_image_batch = GetImagesMatrix(dev_image_batches[i], inc_img_map, INC_features)
+            prob = model.predict_proba([X_question_batch, X_vgg_image_batch, X_inc_image_batch], args.batch_size, verbose=0)
 
             # get word vecs of choices
             choice_feats = GetChoicesTensor(dev_choice_batches[i], word_embedding, word_map)
@@ -272,7 +278,7 @@ def main():
             max_acc_epoch = k
             model.save_weights(model_filename + '_best.hdf5', overwrite=True)
 
-    #model.save_weights(model_filename + '_epoch_{:03d}.hdf5'.format(k+1))
+    model.save_weights(model_filename + '_epoch_{:03d}.hdf5'.format(k+1))
     print(dev_accs)
     for acc in dev_accs:
         acc_file.write('%f\n' % acc)

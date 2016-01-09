@@ -15,38 +15,38 @@ from itertools import zip_longest
 #     I/O functions     #
 #########################
 
-def LoadIds(dataset):
-    # output: list with tuples as elements, list with integers (ids) as elements
-    # ex. [ (img_id, q_id), (), (), (), ... ], [ img_id1, img_id2, ... ]
+def LoadIds(dataset, data_dir='/home/mlds/data/'):
+    # output: 2 lists with integers (ids) as elements
+    # ex. [ q_id1,q_id2, ... ], [ img_id1, img_id2, ... ]
     assert (dataset == 'train' or dataset == 'dev' or dataset == 'test')
-    id_pairs = []
+    q_ids = []
     img_ids = []
-    with open('/home/mlds/data/id.' + dataset, 'r') as data:
+    with open(data_dir + 'id.' + dataset, 'r') as data:
         for line in data:
             ids = line.strip().split('\t')
-            id_pairs.append((int(ids[0]), int(ids[1])))
+            q_ids.append(int(ids[1]))
             img_ids.append(int(ids[0]))
-    return id_pairs, img_ids
+    return q_ids, img_ids
 
-def LoadQuestions(dataset):
+def LoadQuestions(dataset, data_dir='/home/mlds/data/'):
     # output: list with lists as elements
     # ex. [ ['What','is','the','color','of','the','ball','?'], [], [], ... ]
     assert (dataset == 'train' or dataset == 'dev' or dataset == 'test')
     questions = []
-    with open('/home/mlds/data/question_tokens.' + dataset, 'r') as f:
+    with open(data_dir + 'question_tokens.' + dataset, 'r') as f:
         for line in f:
             toks = line.strip().split()
             questions.append(toks)
     return questions
 
-def LoadAnswers(dataset):
+def LoadAnswers(dataset, data_dir='/home/mlds/data/'):
     # output: dictionary
     # ex. { 'lab':[1,2,...], 'toks':[ ['yellow','and','pink'], [], ... ] }
     assert (dataset == 'train' or dataset == 'dev')
     answers = []
     labels = []
-    with open('/home/mlds/data/answer_tokens.' + dataset, 'r') as text, \
-         open('/home/mlds/data/answer_enc.' + dataset, 'r') as enc:
+    with open(data_dir + 'answer_tokens.' + dataset, 'r') as text, \
+         open(data_dir + 'answer_enc.' + dataset, 'r') as enc:
         for (t, e) in zip(text, enc):
             toks = t.strip().split()
             lab = int(e.strip())
@@ -54,12 +54,12 @@ def LoadAnswers(dataset):
             labels.append(lab)
     return {'labs':labels, 'toks':answers}
 
-def LoadChoices(dataset):
+def LoadChoices(dataset, data_dir='/home/mlds/data/'):
     # output: list with lists of lists
     # ex. [  [ ['yellow'],['red'],['blue'],['pink'],['black'] ], [ [],[],[],[],[] ], ... ]
     assert (dataset == 'train' or dataset == 'dev' or dataset == 'test')
     choices = []
-    with open('/home/mlds/data/choice_tokens.' + dataset, 'r') as f:
+    with open(data_dir + 'choice_tokens.' + dataset, 'r') as f:
         i = 0
         wrapper = []
         for text in f:
@@ -71,18 +71,38 @@ def LoadChoices(dataset):
                 wrapper = []
     return choices
 
+def LoadCaptions(dataset, data_dir='/home/mlds/data/'):
+    # output: dict that maps an image id to its captions, which is a list
+    # ex. { 98765: ['There','is','a','cake','on','the','table','.','The','cake','is','on','the','table','.']}
+    assert (dataset == 'train' or dataset == 'test')
+    captions_map = joblib.load(data_dir + 'coco_caption.map.' + dataset)
+    return captions_map
+
 def LoadVGGFeatures():
     # output:
-    #     img_map: a dictionary that maps the COCO Ids to their indices in the precomputed VGG feature matrix
+    #     vgg_img_map: a dictionary that maps the COCO Ids to their indices in the precomputed VGG feature matrix
     #     vgg_features: a numpy array of shape (n_dim, n_images)
     features_struct = sio.loadmat('/home/mlds/visual-qa/features/coco/vgg_feats.mat')
     VGG_features = features_struct['feats']
     image_ids = open('/home/mlds/data/coco_vgg_IDMap.txt').read().splitlines()
-    img_map = {}
+    vgg_img_map = {}
     for ids in image_ids:
         id_split = ids.split()
-        img_map[int(id_split[0])] = int(id_split[1])
-    return VGG_features, img_map
+        vgg_img_map[int(id_split[0])] = int(id_split[1])
+    return VGG_features, vgg_img_map
+
+def LoadInceptionFeatures():
+    # output:
+    #     inc_img_map: a dictionary that maps the COCO Ids to their indices in the precomputed Inception feature matrix
+    #     inc_features: a numpy array of shape (n_dim, n_images)
+    features_struct = sio.loadmat('/home/mlds/data/inception_feats.mat')
+    INC_features = features_struct['feats']
+    image_ids = open('/home/mlds/data/coco_inception_IDMap.txt').read().splitlines()
+    inc_img_map = {}
+    for ids in image_ids:
+        id_split = ids.split()
+        inc_img_map[int(id_split[0])] = int(id_split[1])
+    return INC_features, inc_img_map
 
 def LoadGloVe():
     # output:
@@ -100,11 +120,11 @@ def LoadGloVe():
             i += 1
     return word_embedding, word_map
 
-def SavePredictions(filepath, predictions, id_pairs):
+def SavePredictions(filepath, predictions, qids):
     with open(filepath, 'w') as f:
         f.write('q_id,ans\n')
-        for i in range(len(id_pairs)):
-            qid = id_pairs[i][1]
+        for i in range(len(qids)):
+            qid = qids[i]
             pred = predictions[i]
             if pred == 1:
                 ans = 'A'
@@ -153,6 +173,25 @@ def GetQuestionsTensor(questions, word_embedding, word_map):
             if j < timesteps:
                 questions_tensor[i,j,:] = feature
     return questions_tensor
+
+def GetCaptionsTensor(ids, word_embedding, word_map, caption_map):
+    # description: returns a time series of word vectors for tokens in the caption
+    # output:
+    #     a numpy ndarray of shape: (batch_size, timesteps, word_vec_dim)
+    batch_size = len(ids)
+    captions = []
+    for i in range(batch_size):
+        captions.append(caption_map[ids[i]])
+    timesteps = FindQuestionsMaxLen(captions)
+    word_vec_dim = 300
+    captions_tensor = np.zeros((batch_size, timesteps, word_vec_dim), float)
+    for i in range(len(captions)):
+        tokens = captions[i]
+        for j in range(len(tokens)):
+            feature = GetWordFeature(tokens[j], word_embedding, word_map)
+            if j < timesteps:
+                captions_tensor[i,j,:] = feature
+    return captions_tensor
 
 def GetAnswersMatrix(answers, word_embedding, word_map):
     # output:

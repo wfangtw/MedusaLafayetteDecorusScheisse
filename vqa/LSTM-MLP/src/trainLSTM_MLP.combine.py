@@ -7,7 +7,7 @@
 
 import numpy as np
 import scipy.io as sio
-from sklearn.metrics.pairwise import cosine_similarity, pairwise_distances
+from sklearn.metrics.pairwise import cosine_similarity
 import sys
 import argparse
 import joblib
@@ -23,12 +23,6 @@ from keras.utils import generic_utils
 from keras.optimizers import RMSprop
 
 from utils import  LoadIds, LoadQuestions, LoadAnswers, LoadChoices, LoadVGGFeatures, LoadGloVe, GetImagesMatrix, GetQuestionsTensor, GetAnswersMatrix, GetChoicesTensor, MakeBatches
-
-def Loss(y_true, y_pred):
-    norm_true = y_true.norm(2, axis=1)
-    norm_pred = y_pred.norm(2, axis=1)
-    normalized_dot = (y_true*y_pred).sum(axis=1)/(norm_true*norm_pred)
-    return (1-normalized_dot).sum()
 
 def main():
     start_time = time.time()
@@ -53,21 +47,20 @@ def main():
     ######################
     #      Load Data     #
     ######################
-    data_dir = '/home/mlds/data/0.05_val/'
 
     print('Loading data...')
 
-    train_id_pairs, train_image_ids = LoadIds('train', data_dir)
-    dev_id_pairs, dev_image_ids = LoadIds('dev', data_dir)
+    train_id_pairs, train_image_ids = LoadIds('train')
+    dev_id_pairs, dev_image_ids = LoadIds('dev')
 
-    train_questions = LoadQuestions('train', data_dir)
-    dev_questions = LoadQuestions('dev', data_dir)
+    train_questions = LoadQuestions('train')
+    dev_questions = LoadQuestions('dev')
 
-    train_choices = LoadChoices('train', data_dir)
-    dev_choices = LoadChoices('dev', data_dir)
+    train_choices = LoadChoices('train')
+    dev_choices = LoadChoices('dev')
 
-    train_answers = LoadAnswers('train', data_dir)
-    dev_answers = LoadAnswers('dev', data_dir)
+    train_answers = LoadAnswers('train')
+    dev_answers = LoadAnswers('dev')
 
     print('Finished loading data.')
     print('Time: %f s' % (time.time()-start_time))
@@ -113,17 +106,15 @@ def main():
         model.add(Activation(args.mlp_activation))
         model.add(Dropout(args.dropout))
     model.add(Dense(word_vec_dim))
-    #model.add(Activation('softmax'))
+    model.add(Activation('softmax'))
 
     json_string = model.to_json()
-    model_filename = 'models/vgg_lstm_units_%i_layers_%i_mlp_units_%i_layers_%i_%s_lr%.1e_dropout%.2f' % (args.lstm_hidden_units, args.lstm_hidden_layers, args.mlp_hidden_units, args.mlp_hidden_layers, args.mlp_activation, args.learning_rate, args.dropout)
-    #model_filename = 'models/vgg_lstm_units_%i_layers_%i_mlp_units_%i_layers_%i_%s_lr%.1e_dropout%.2f_loss_cosine' % (args.lstm_hidden_units, args.lstm_hidden_layers, args.mlp_hidden_units, args.mlp_hidden_layers, args.mlp_activation, args.learning_rate, args.dropout)
+    model_filename = 'models/vgg_lstm_units_%i_layers_%i_mlp_units_%i_layers_%i_%s_lr%.1e_dropout%.1f' % (args.lstm_hidden_units, args.lstm_hidden_layers, args.mlp_hidden_units, args.mlp_hidden_layers, args.mlp_activation, args.learning_rate, args.dropout)
     open(model_filename + '.json', 'w').write(json_string)
 
     # loss and optimizer
     rmsprop = RMSprop(lr=args.learning_rate)
-    #model.compile(loss='categorical_crossentropy', optimizer=rmsprop)
-    model.compile(loss=Loss, optimizer=rmsprop)
+    model.compile(loss='categorical_crossentropy', optimizer=rmsprop)
     print('Compilation finished.')
     print('Time: %f s' % (time.time()-start_time))
 
@@ -239,7 +230,7 @@ def main():
 
         dev_correct = 0
 
-        # feed forward
+            # feed forward
         for i in range(len(dev_question_batches)):
             X_question_batch = GetQuestionsTensor(dev_question_batches[i], word_embedding, word_map)
             X_image_batch = GetImagesMatrix(dev_image_batches[i], img_map, VGG_features)
@@ -272,12 +263,12 @@ def main():
             max_acc_epoch = k
             model.save_weights(model_filename + '_best.hdf5', overwrite=True)
 
-    #model.save_weights(model_filename + '_epoch_{:03d}.hdf5'.format(k+1))
+    model.save_weights(model_filename + '_epoch_{:03d}.hdf5'.format(k+1))
     print(dev_accs)
     for acc in dev_accs:
         acc_file.write('%f\n' % acc)
-    print('Best validation accuracy: %f; epoch#%i' % (max_acc,(max_acc_epoch+1)))
-    acc_file.write('Best validation accuracy: %f; epoch#%i\n' % (max_acc,(max_acc_epoch+1)))
+    print('Best validation accuracy: epoch#%i' % (max_acc_epoch+1))
+    acc_file.write('Best validation accuracy: epoch#%i\n' % (max_acc_epoch+1))
     print('Training finished.')
     acc_file.write('Training finished.\n')
     print('Time: %f s' % (time.time()-start_time))

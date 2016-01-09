@@ -16,13 +16,13 @@ import signal
 import random
 from progressbar import Bar, ETA, Percentage, ProgressBar
 
-from keras.models import Sequential
+from keras.models import Graph
 from keras.layers.core import Dense, Activation, Merge, Dropout, Reshape
-from keras.layers.recurrent import LSTM
 from keras.utils import generic_utils
 from keras.optimizers import RMSprop
 
 from utils import  LoadIds, LoadQuestions, LoadAnswers, LoadChoices, LoadVGGFeatures, LoadGloVe, GetImagesMatrix, GetQuestionsTensor, GetAnswersMatrix, GetChoicesTensor, MakeBatches
+from graph import CreateGraph
 
 def Loss(y_true, y_pred):
     norm_true = y_true.norm(2, axis=1)
@@ -33,16 +33,15 @@ def Loss(y_true, y_pred):
 def main():
     start_time = time.time()
 
-    parser = argparse.ArgumentParser(prog='trainLSTM_MLP.py',
-            description='Train LSTM-MLP model for visual question answering')
+    parser = argparse.ArgumentParser(prog='trainMemNN.py',
+            description='Train MemmNN  model for visual question answering')
     parser.add_argument('--mlp-hidden-units', type=int, default=1024, metavar='<mlp-hidden-units>')
-    parser.add_argument('--lstm-hidden-units', type=int, default=512, metavar='<lstm-hidden-units>')
     parser.add_argument('--mlp-hidden-layers', type=int, default=3, metavar='<mlp-hidden-layers>')
-    parser.add_argument('--lstm-hidden-layers', type=int, default=1, metavar='<lstm-hidden-layers>')
-    parser.add_argument('--dropout', type=float, default=0.5, metavar='<dropout-rate>')
     parser.add_argument('--mlp-activation', type=str, default='tanh', metavar='<activation-function>')
+    parser.add_argument('--emb-dimension', type=int, default=50, metavar='<embedding-dimension>')
     parser.add_argument('--num-epochs', type=int, default=100, metavar='<num-epochs>')
     parser.add_argument('--batch-size', type=int, default=128, metavar='<batch-size>')
+    parser.add_argument('--hops', type=int, default=3, metavar='<memnet-hops>')
     parser.add_argument('--learning-rate', type=float, default=0.001, metavar='<learning-rate>')
     parser.add_argument('--dev-accuracy-path', type=str, required=True, metavar='<accuracy-path>')
     args = parser.parse_args()
@@ -50,6 +49,7 @@ def main():
     word_vec_dim = 300
     img_dim = 4096
     max_len = 30
+    img_feature_num = 6
     ######################
     #      Load Data     #
     ######################
@@ -57,8 +57,8 @@ def main():
 
     print('Loading data...')
 
-    train_id_pairs, train_image_ids = LoadIds('train', data_dir)
-    dev_id_pairs, dev_image_ids = LoadIds('dev', data_dir)
+    train_q_ids, train_image_ids = LoadIds('train', data_dir)
+    dev_q_ids, dev_image_ids = LoadIds('dev', data_dir)
 
     train_questions = LoadQuestions('train', data_dir)
     dev_questions = LoadQuestions('dev', data_dir)
@@ -76,54 +76,17 @@ def main():
     # Model Descriptions #
     ######################
     print('Generating and compiling model...')
-
-    # image model (CNN features)
-    image_model = Sequential()
-    image_model.add(Reshape(
-        input_shape=(img_dim,), dims=(img_dim,)
-        ))
-
-    # language model (LSTM)
-    language_model = Sequential()
-    if args.lstm_hidden_layers == 1:
-        language_model.add(LSTM(
-            output_dim=args.lstm_hidden_units, return_sequences=False, input_shape=(max_len, word_vec_dim)
-            ))
-    else:
-        language_model.add(LSTM(
-            output_dim=args.lstm_hidden_units, return_sequences=True, input_shape=(max_len, word_vec_dim)
-            ))
-        for i in range(args.lstm_hidden_layers-2):
-            language_model.add(LSTM(
-                output_dim=args.lstm_hidden_units, return_sequences=True
-                ))
-        language_model.add(LSTM(
-            output_dim=args.lstm_hidden_units, return_sequences=False
-            ))
-
-    # feedforward model (MLP)
-    model = Sequential()
-    model.add(Merge(
-        [language_model, image_model], mode='concat', concat_axis=1
-        ))
-    for i in range(args.mlp_hidden_layers):
-        model.add(Dense(
-            args.mlp_hidden_units, init='uniform'
-            ))
-        model.add(Activation(args.mlp_activation))
-        model.add(Dropout(args.dropout))
-    model.add(Dense(word_vec_dim))
-    #model.add(Activation('softmax'))
+    model = CreateGraph(args.emb_dimension, args.hops, args.batch_size, args.mlp_activation, args.mlp_hidden_units, args.mlp_hidden_layers, word_vec_dim, img_dim, img_feature_num)
 
     json_string = model.to_json()
-    model_filename = 'models/vgg_lstm_units_%i_layers_%i_mlp_units_%i_layers_%i_%s_lr%.1e_dropout%.2f' % (args.lstm_hidden_units, args.lstm_hidden_layers, args.mlp_hidden_units, args.mlp_hidden_layers, args.mlp_activation, args.learning_rate, args.dropout)
+    model_filename = 'models/memNN__mlp_units_%i_layers_%i_%s_lr%.1e_dropout.2f' % ( args.mlp_hidden_units, args.mlp_hidden_layers, args.mlp_activation, args.emb_dimension, args.hops, args.learning_rate, args.dropout)
     #model_filename = 'models/vgg_lstm_units_%i_layers_%i_mlp_units_%i_layers_%i_%s_lr%.1e_dropout%.2f_loss_cosine' % (args.lstm_hidden_units, args.lstm_hidden_layers, args.mlp_hidden_units, args.mlp_hidden_layers, args.mlp_activation, args.learning_rate, args.dropout)
     open(model_filename + '.json', 'w').write(json_string)
 
     # loss and optimizer
     rmsprop = RMSprop(lr=args.learning_rate)
     #model.compile(loss='categorical_crossentropy', optimizer=rmsprop)
-    model.compile(loss=Loss, optimizer=rmsprop)
+    model.compile(loss='categorical_crossentropy', optimizer=rmsprop)
     print('Compilation finished.')
     print('Time: %f s' % (time.time()-start_time))
 

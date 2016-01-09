@@ -7,7 +7,7 @@
 
 import numpy as np
 import scipy.io as sio
-from sklearn.metrics.pairwise import cosine_similarity, pairwise_distances
+from sklearn.metrics.pairwise import cosine_similarity
 import sys
 import argparse
 import joblib
@@ -22,41 +22,65 @@ from keras.layers.recurrent import LSTM
 from keras.utils import generic_utils
 from keras.optimizers import RMSprop
 
-from utils import  LoadIds, LoadQuestions, LoadAnswers, LoadChoices, LoadVGGFeatures, LoadGloVe, GetImagesMatrix, GetQuestionsTensor, GetAnswersMatrix, GetChoicesTensor, MakeBatches
+from utils import  LoadIds, LoadQuestions, LoadAnswers, LoadChoices, LoadInceptionFeatures, LoadGloVe, GetImagesMatrix, GetQuestionsTensor, GetAnswersMatrix, GetChoicesTensor, MakeBatches
 
-def Loss(y_true, y_pred):
-    norm_true = y_true.norm(2, axis=1)
-    norm_pred = y_pred.norm(2, axis=1)
-    normalized_dot = (y_true*y_pred).sum(axis=1)/(norm_true*norm_pred)
-    return (1-normalized_dot).sum()
+def GetAnswersOneHotMatrix(answers, nb_classes):
+    batch_size = len(answers)
+    ans_matrix = np.zeros((batch_size, nb_classes), int)
+    for j in range(batch_size):
+        tokens = answers[j]
+        if len(tokens) == 1:
+            tok = tokens[0]
+            if tok.isdigit():
+                tok = int(tok)
+                if tok >= nb_classes:
+                    tok = nb_classes - 1
+            else:
+                tok = nb_classes - 1
+        else:
+            has_int = False
+            for tok in tokens:
+                if tok.isdigit():
+                    has_int = True
+                    tok = int(tok)
+                    if tok >= nb_classes:
+                        tok = nb_classes - 1
+                    break
+            if not has_int:
+                tok = nb_classes - 1
+        ans_matrix[j,tok] = 1
+    #print(ans_matrix)
+    #sys.exit(0)
+    return ans_matrix
 
 def main():
     start_time = time.time()
 
     parser = argparse.ArgumentParser(prog='trainLSTM_MLP.py',
             description='Train LSTM-MLP model for visual question answering')
-    parser.add_argument('--mlp-hidden-units', type=int, default=1024, metavar='<mlp-hidden-units>')
+    parser.add_argument('--mlp-hidden-units', type=int, default=256, metavar='<mlp-hidden-units>')
     parser.add_argument('--lstm-hidden-units', type=int, default=512, metavar='<lstm-hidden-units>')
     parser.add_argument('--mlp-hidden-layers', type=int, default=3, metavar='<mlp-hidden-layers>')
     parser.add_argument('--lstm-hidden-layers', type=int, default=1, metavar='<lstm-hidden-layers>')
-    parser.add_argument('--dropout', type=float, default=0.5, metavar='<dropout-rate>')
-    parser.add_argument('--mlp-activation', type=str, default='tanh', metavar='<activation-function>')
-    parser.add_argument('--num-epochs', type=int, default=100, metavar='<num-epochs>')
+    parser.add_argument('--dropout', type=float, default=0.3, metavar='<dropout-rate>')
+    parser.add_argument('--mlp-activation', type=str, default='relu', metavar='<activation-function>')
+    parser.add_argument('--num-epochs', type=int, default=60, metavar='<num-epochs>')
     parser.add_argument('--batch-size', type=int, default=128, metavar='<batch-size>')
-    parser.add_argument('--learning-rate', type=float, default=0.001, metavar='<learning-rate>')
+    parser.add_argument('--learning-rate', type=float, default=0.0001, metavar='<learning-rate>')
     parser.add_argument('--dev-accuracy-path', type=str, required=True, metavar='<accuracy-path>')
     args = parser.parse_args()
 
     word_vec_dim = 300
-    img_dim = 4096
+    img_dim = 2048
     max_len = 30
+    nb_classes = 10
     ######################
     #      Load Data     #
     ######################
-    data_dir = '/home/mlds/data/0.05_val/'
 
     print('Loading data...')
 
+    data_dir = '/home/mlds/data/many/'
     train_id_pairs, train_image_ids = LoadIds('train', data_dir)
     dev_id_pairs, dev_image_ids = LoadIds('dev', data_dir)
 
@@ -112,18 +136,16 @@ def main():
             ))
         model.add(Activation(args.mlp_activation))
         model.add(Dropout(args.dropout))
-    model.add(Dense(word_vec_dim))
-    #model.add(Activation('softmax'))
+    model.add(Dense(nb_classes))
+    model.add(Activation('softmax'))
 
     json_string = model.to_json()
-    model_filename = 'models/vgg_lstm_units_%i_layers_%i_mlp_units_%i_layers_%i_%s_lr%.1e_dropout%.2f' % (args.lstm_hidden_units, args.lstm_hidden_layers, args.mlp_hidden_units, args.mlp_hidden_layers, args.mlp_activation, args.learning_rate, args.dropout)
-    #model_filename = 'models/vgg_lstm_units_%i_layers_%i_mlp_units_%i_layers_%i_%s_lr%.1e_dropout%.2f_loss_cosine' % (args.lstm_hidden_units, args.lstm_hidden_layers, args.mlp_hidden_units, args.mlp_hidden_layers, args.mlp_activation, args.learning_rate, args.dropout)
+    model_filename = 'models/many/inception_lstm_units_%i_layers_%i_mlp_units_%i_layers_%i_%s_lr%.1e_dropout%.1f' % (args.lstm_hidden_units, args.lstm_hidden_layers, args.mlp_hidden_units, args.mlp_hidden_layers, args.mlp_activation, args.learning_rate, args.dropout)
     open(model_filename + '.json', 'w').write(json_string)
 
     # loss and optimizer
     rmsprop = RMSprop(lr=args.learning_rate)
-    #model.compile(loss='categorical_crossentropy', optimizer=rmsprop)
-    model.compile(loss=Loss, optimizer=rmsprop)
+    model.compile(loss='categorical_crossentropy', optimizer=rmsprop)
     print('Compilation finished.')
     print('Time: %f s' % (time.time()-start_time))
 
@@ -131,10 +153,10 @@ def main():
     #  Load CNN Features and Word Vectors  #
     ########################################
 
-    # load VGG features
-    print('Loading VGG features...')
-    VGG_features, img_map = LoadVGGFeatures()
-    print('VGG features loaded')
+    # load Inception features
+    print('Loading Inception features...')
+    INC_features, img_map = LoadInceptionFeatures()
+    print('Inception features loaded')
     print('Time: %f s' % (time.time()-start_time))
 
     # load GloVe vectors
@@ -157,7 +179,8 @@ def main():
 
     # validation batches
     dev_question_batches = [ b for b in MakeBatches(dev_questions, args.batch_size, fillvalue=dev_questions[-1]) ]
-    dev_answer_batches = [ b for b in MakeBatches(dev_answers['labs'], args.batch_size, fillvalue=dev_answers['labs'][-1]) ]
+    dev_answer_batches = [ b for b in MakeBatches(dev_answers['toks'], args.batch_size, fillvalue=dev_answers['toks'][-1]) ]
+    #dev_answer_batches = [ b for b in MakeBatches(dev_answers['labs'], args.batch_size, fillvalue=dev_answers['labs'][-1]) ]
     dev_choice_batches = [ b for b in MakeBatches(dev_choices, args.batch_size, fillvalue=dev_choices[-1]) ]
     dev_image_batches = [ b for b in MakeBatches(dev_image_ids, args.batch_size, fillvalue=dev_image_ids[-1]) ]
 
@@ -227,8 +250,9 @@ def main():
         random.shuffle(train_indices)
         for i in train_indices:
             X_question_batch = GetQuestionsTensor(train_question_batches[i], word_embedding, word_map)
-            X_image_batch = GetImagesMatrix(train_image_batches[i], img_map, VGG_features)
-            Y_answer_batch = GetAnswersMatrix(train_answer_batches[i], word_embedding, word_map)
+            X_image_batch = GetImagesMatrix(train_image_batches[i], img_map, INC_features)
+            #Y_answer_batch = GetAnswersMatrix(train_answer_batches[i], word_embedding, word_map)
+            Y_answer_batch = GetAnswersOneHotMatrix(train_answer_batches[i], nb_classes)
             loss = model.train_on_batch([X_question_batch, X_image_batch], Y_answer_batch)
             loss = loss[0].tolist()
             progbar.add(args.batch_size, values=[('train loss', loss)])
@@ -238,32 +262,36 @@ def main():
         pbar = generic_utils.Progbar(len(dev_question_batches)*args.batch_size)
 
         dev_correct = 0
+        predictions = []
 
-        # feed forward
+            # feed forward
         for i in range(len(dev_question_batches)):
             X_question_batch = GetQuestionsTensor(dev_question_batches[i], word_embedding, word_map)
-            X_image_batch = GetImagesMatrix(dev_image_batches[i], img_map, VGG_features)
-            prob = model.predict_proba([X_question_batch, X_image_batch], args.batch_size, verbose=0)
+            X_image_batch = GetImagesMatrix(dev_image_batches[i], img_map, INC_features)
+            Y_answer_batch = GetAnswersOneHotMatrix(dev_answer_batches[i], nb_classes)
+            pred = model.predict_classes([X_question_batch, X_image_batch], args.batch_size, verbose=0)
+            predictions.extend(pred.tolist())
 
             # get word vecs of choices
-            choice_feats = GetChoicesTensor(dev_choice_batches[i], word_embedding, word_map)
-            similarity = np.zeros((5, args.batch_size), float)
+            #choice_feats = GetChoicesTensor(dev_choice_batches[i], word_embedding, word_map)
+            #similarity = np.zeros((5, args.batch_size), float)
             # calculate cosine distances
-            for j in range(5):
-                similarity[j] = np.diag(cosine_similarity(prob, choice_feats[j]))
+            #for j in range(5):
+                #similarity[j] = np.diag(cosine_similarity(prob, choice_feats[j]))
             # take argmax of cosine distances
-            pred = np.argmax(similarity, axis=0) + 1
+            #pred = np.argmax(similarity, axis=0) + 1
 
             if i != (len(dev_question_batches)-1):
-                dev_correct += np.count_nonzero(dev_answer_batches[i]==pred)
+                dev_correct += np.count_nonzero(np.argmax(Y_answer_batch,axis=1)==pred)
             else:
                 num_padding = args.batch_size * len(dev_question_batches) - len(dev_questions)
                 last_idx = args.batch_size - num_padding
-                dev_correct += np.count_nonzero(dev_answer_batches[:last_idx]==pred[:last_idx])
+                dev_correct += np.count_nonzero(np.argmax(Y_answer_batch[:last_idx])==pred[:last_idx])
             pbar.add(args.batch_size)
 
         dev_acc = float(dev_correct)/len(dev_questions)
         dev_accs.append(dev_acc)
+        #print(predictions)
         print('Validation Accuracy: %f' % dev_acc)
         print('Time: %f s' % (time.time()-start_time))
 
@@ -272,7 +300,7 @@ def main():
             max_acc_epoch = k
             model.save_weights(model_filename + '_best.hdf5', overwrite=True)
 
-    #model.save_weights(model_filename + '_epoch_{:03d}.hdf5'.format(k+1))
+    model.save_weights(model_filename + '_epoch_{:03d}.hdf5'.format(k+1))
     print(dev_accs)
     for acc in dev_accs:
         acc_file.write('%f\n' % acc)

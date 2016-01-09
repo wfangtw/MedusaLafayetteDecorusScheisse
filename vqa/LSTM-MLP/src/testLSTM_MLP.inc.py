@@ -14,14 +14,13 @@ import joblib
 import time
 import signal
 import random
-from progressbar import Bar, ETA, Percentage, ProgressBar
 
 from keras.models import Sequential, model_from_json
 from keras.layers.core import Dense, Activation, Merge, Dropout, Reshape
 from keras.layers.recurrent import LSTM
 from keras.utils import generic_utils
 
-from utils import  LoadIds, LoadQuestions, LoadAnswers, LoadChoices, LoadVGGFeatures, SavePredictions, LoadGloVe, GetImagesMatrix, GetQuestionsTensor, GetAnswersMatrix, GetChoicesTensor, MakeBatches
+from utils import  LoadIds, LoadQuestions, LoadAnswers, LoadChoices, LoadVGGFeatures, LoadInceptionFeatures, SavePredictions, LoadGloVe, GetImagesMatrix, GetQuestionsTensor, GetAnswersMatrix, GetChoicesTensor, MakeBatches
 
 def main():
     start_time = time.time()
@@ -71,10 +70,10 @@ def main():
     #  Load CNN Features and Word Vectors  #
     ########################################
 
-    # load VGG features
-    print('Loading VGG features...')
-    VGG_features, img_map = LoadVGGFeatures()
-    print('VGG features loaded')
+    # load Inception features
+    print('Loading Inception features...')
+    INC_features, img_map = LoadInceptionFeatures()
+    print('Inception features loaded')
     print('Time: %f s' % (time.time()-start_time))
 
     # load GloVe vectors
@@ -116,7 +115,7 @@ def main():
     for i in range(len(test_question_batches)):
         # feed forward
         X_question_batch = GetQuestionsTensor(test_question_batches[i], word_embedding, word_map)
-        X_image_batch = GetImagesMatrix(test_image_batches[i], img_map, VGG_features)
+        X_image_batch = GetImagesMatrix(test_image_batches[i], img_map, INC_features)
         prob = model.predict_proba([X_question_batch, X_image_batch], batch_size, verbose=0)
 
         # get word vecs of choices
@@ -132,7 +131,7 @@ def main():
 
         #dev_correct += np.count_nonzero(dev_answer_batches[i]==pred)
 
-    SavePredictions(args.output, predictions, test_q_ids)
+    SavePredictions(args.output, predictions, test_id_pairs)
     print('Time: %f s' % (time.time()-start_time))
     print('Testing finished.')
 
