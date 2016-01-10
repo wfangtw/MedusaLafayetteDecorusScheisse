@@ -193,6 +193,25 @@ def GetCaptionsTensor(ids, word_embedding, word_map, caption_map):
                 captions_tensor[i,j,:] = feature
     return captions_tensor
 
+def GetCaptionsTensor2(ids, word_embedding, word_map, caption_map):
+    # description: returns a time series of word vectors for tokens in the caption
+    # output:
+    #     a numpy ndarray of shape: (batch_size, timesteps, word_vec_dim)
+    batch_size = len(ids)
+    captions = []
+    for i in range(batch_size):
+        captions.append(caption_map[ids[i]])
+    timesteps = 125
+    word_vec_dim = 300
+    captions_tensor = np.zeros((batch_size, timesteps, word_vec_dim), float)
+    for i in range(len(captions)):
+        tokens = captions[i]
+        for j in range(len(tokens)):
+            feature = GetWordFeature(tokens[j], word_embedding, word_map)
+            if j < timesteps:
+                captions_tensor[i,j,:] = feature
+    return captions_tensor
+
 def GetAnswersMatrix(answers, word_embedding, word_map):
     # output:
     #     a numpy array of shape (batch_size, word_vec_dim)
