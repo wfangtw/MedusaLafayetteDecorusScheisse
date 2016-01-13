@@ -54,7 +54,7 @@ def main():
     ######################
     #      Load Data     #
     ######################
-    data_dir = '/home/mlds/data/0.05_val/'
+    data_dir = '/home/mlds/data/many/'
 
     print('Loading data...')
 
@@ -105,7 +105,7 @@ def main():
     model = CreateGraph(args.emb_dimension, args.hops, args.mlp_activation, args.mlp_hidden_units, args.mlp_hidden_layers, word_vec_dim, img_dim, img_feature_num, args.dropout)
 
     json_string = model.to_json()
-    model_filename = 'models/memNN.mlp_units_%i_layers_%i_%s.emb_dim_%i.hops_%i.lr%.1e.dropout_%.1e' % ( args.mlp_hidden_units, args.mlp_hidden_layers, args.mlp_activation, args.emb_dimension, args.hops, args.learning_rate, args.dropout)
+    model_filename = 'models/memNN.mlp_units_%i_layers_%i_%s.emb_dim_%i.hops_%i.lr%.1e.dropout_%.1e.many' % ( args.mlp_hidden_units, args.mlp_hidden_layers, args.mlp_activation, args.emb_dimension, args.hops, args.learning_rate, args.dropout)
     open(model_filename + '.json', 'w').write(json_string)
 
     # loss and optimizer

@@ -21,8 +21,8 @@ from keras.layers.core import Dense, Activation, Merge, Dropout, Reshape
 from keras.utils import generic_utils
 from keras.optimizers import RMSprop
 
-from utils import  LoadIds, LoadQuestions, LoadAnswers, LoadChoices, LoadVGGFeatures, LoadGloVe, GetImagesMatrix, GetQuestionsTensor, GetAnswersMatrix, GetChoicesTensor, MakeBatches, LoadCaptions, GetCaptionsTensor2
-from settings import CreateGraph
+from utils import  LoadIds, LoadQuestions, LoadAnswers, LoadChoices, LoadVGGFeatures, LoadGloVe, GetImagesMatrix, GetQuestionsTensor, GetAnswersMatrix, GetChoicesTensor, MakeBatches, LoadCaptions, GetCaptionsTensor2, GetQuestionsVector
+from settings_nolstm import CreateGraph
 
 def Loss(y_true, y_pred):
     norm_true = y_true.norm(2, axis=1)
@@ -34,7 +34,7 @@ def main():
     start_time = time.time()
 
     parser = argparse.ArgumentParser(prog='trainMemNN.py',
-            description='Train MemmNN model for visual question answering')
+            description='Train MemmNN  model for visual question answering')
     parser.add_argument('--mlp-hidden-units', type=int, default=1024, metavar='<mlp-hidden-units>')
     parser.add_argument('--mlp-hidden-layers', type=int, default=3, metavar='<mlp-hidden-layers>')
     parser.add_argument('--mlp-activation', type=str, default='tanh', metavar='<activation-function>')
@@ -43,7 +43,6 @@ def main():
     parser.add_argument('--batch-size', type=int, default=128, metavar='<batch-size>')
     parser.add_argument('--hops', type=int, default=3, metavar='<memnet-hops>')
     parser.add_argument('--learning-rate', type=float, default=0.001, metavar='<learning-rate>')
-    parser.add_argument('--dropout', type=float, default=0.2, metavar='<dropout-rate>')
     parser.add_argument('--dev-accuracy-path', type=str, required=True, metavar='<accuracy-path>')
     args = parser.parse_args()
 
@@ -102,10 +101,10 @@ def main():
     # Model Descriptions #
     ######################
     print('Generating and compiling model...')
-    model = CreateGraph(args.emb_dimension, args.hops, args.mlp_activation, args.mlp_hidden_units, args.mlp_hidden_layers, word_vec_dim, img_dim, img_feature_num, args.dropout)
+    model = CreateGraph(args.emb_dimension, args.hops, args.mlp_activation, args.mlp_hidden_units, args.mlp_hidden_layers, word_vec_dim, img_dim, img_feature_num)
 
     json_string = model.to_json()
-    model_filename = 'models/memNN.mlp_units_%i_layers_%i_%s.emb_dim_%i.hops_%i.lr%.1e.dropout_%.1e' % ( args.mlp_hidden_units, args.mlp_hidden_layers, args.mlp_activation, args.emb_dimension, args.hops, args.learning_rate, args.dropout)
+    model_filename = 'models/memNN_nolstm.mlp_units_%i_layers_%i_%s.emb_dim_%i.hops_%i.lr%.1e' % ( args.mlp_hidden_units, args.mlp_hidden_layers, args.mlp_activation, args.emb_dimension, args.hops, args.learning_rate)
     open(model_filename + '.json', 'w').write(json_string)
 
     # loss and optimizer
@@ -200,7 +199,6 @@ def main():
     acc_file.write('# of train questions: %i\n' % len(train_questions))
     acc_file.write('# of dev questions: %i\n' % len(dev_questions))
     acc_file.write('-'*80 + '\n')
-    acc_file.close()
 
     # start training
     print('Training started...')
@@ -211,7 +209,7 @@ def main():
         # shuffle batch indices
         random.shuffle(train_indices)
         for i in train_indices:
-            X_question_batch = GetQuestionsTensor(train_question_batches[i], word_embedding, word_map)
+            X_question_batch = GetQuestionsVector(train_question_batches[i], word_embedding, word_map)
             #X_image_batch = GetImagesMatrix(train_image_batches[i], img_map, VGG_features)
             X_caption_batch = GetCaptionsTensor2(train_image_batches[i], word_embedding, word_map, caption_map)
             Y_answer_batch = GetAnswersMatrix(train_answer_batches[i], word_embedding, word_map)
@@ -227,7 +225,7 @@ def main():
 
         # feed forward
         for i in range(len(dev_question_batches)):
-            X_question_batch = GetQuestionsTensor(dev_question_batches[i], word_embedding, word_map)
+            X_question_batch = GetQuestionsVector(dev_question_batches[i], word_embedding, word_map)
             #X_image_batch = GetImagesMatrix(dev_image_batches[i], img_map, VGG_features)
             X_caption_batch = GetCaptionsTensor2(dev_image_batches[i], word_embedding, word_map, caption_map)
             prob = model.predict_on_batch({'question':X_question_batch, 'image':X_caption_batch})
@@ -252,8 +250,6 @@ def main():
 
         dev_acc = float(dev_correct)/len(dev_questions)
         dev_accs.append(dev_acc)
-        with open(args.dev_accuracy_path, 'a') as acc_file:
-            acc_file.write('%f\n' % dev_acc)
         print('Validation Accuracy: %f' % dev_acc)
         print('Time: %f s' % (time.time()-start_time))
 
@@ -263,8 +259,9 @@ def main():
             model.save_weights(model_filename + '_best.hdf5', overwrite=True)
 
     #model.save_weights(model_filename + '_epoch_{:03d}.hdf5'.format(k+1))
-    acc_file = open(args.dev_accuracy_path, 'a')
     print(dev_accs)
+    for acc in dev_accs:
+        acc_file.write('%f\n' % acc)
     print('Best validation accuracy: %f; epoch#%i' % (max_acc,(max_acc_epoch+1)))
     acc_file.write('Best validation accuracy: %f; epoch#%i\n' % (max_acc,(max_acc_epoch+1)))
     print('Training finished.')

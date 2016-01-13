@@ -14,7 +14,6 @@ import joblib
 import time
 import signal
 import random
-from progressbar import Bar, ETA, Percentage, ProgressBar
 
 from keras.models import Sequential
 from keras.layers.core import Dense, Activation, Merge, Dropout, Reshape

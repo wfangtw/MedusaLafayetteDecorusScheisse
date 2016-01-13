@@ -22,7 +22,7 @@ def weighted_sum(tensors):
 def transpose(tensor):
     return tensor.dimshuffle(0,2,1)
 
-def CreateGraph(emb_dim, hops, activation, mlp_unit, mlp_layer, word_vec_dim, img_dim, emb_size, dropout):
+def CreateGraph(emb_dim, hops, activation, mlp_unit, mlp_layer, word_vec_dim, img_dim, emb_size):
     # model
     model = Graph()
     model.add_input(
@@ -31,12 +31,7 @@ def CreateGraph(emb_dim, hops, activation, mlp_unit, mlp_layer, word_vec_dim, im
             )
     model.add_input(
             name='question',
-            input_shape=(30, word_vec_dim)
-            )
-    model.add_node(
-            LSTM(output_dim=word_vec_dim, return_sequences=False, input_shape=(30, word_vec_dim)),
-            name='query',
-            input='question'
+            input_shape=(word_vec_dim,)
             )
 
     model.add_node(
@@ -52,7 +47,7 @@ def CreateGraph(emb_dim, hops, activation, mlp_unit, mlp_layer, word_vec_dim, im
     model.add_node(
             Dense(emb_dim),
             name='embC0',
-            input='query'
+            input='question'
             )
 
     for i in range(hops):
@@ -129,27 +124,18 @@ def CreateGraph(emb_dim, hops, activation, mlp_unit, mlp_layer, word_vec_dim, im
                 name='mlp0',
                 input='embC%i'%hops
                 )
-        model.add_node(
-                Dropout(dropout),
-                name='dropout0',
-                input='mlp0'
-                )
+
     if mlp_layer > 1:
         for j in range(mlp_layer-1):
             model.add_node(
                     Dense(mlp_unit, activation=activation),
-                    name='mlp%i'%(j+1),
-                    input='dropout%i'%j
-                    )
-            model.add_node(
-                    Dropout(dropout),
-                    name='dropout%i'%(j+1),
-                    input='mlp%i'%(j+1)
+                    name='mlp'+str(j+1),
+                    input='mlp'+str(j)
                     )
     model.add_node(
             Dense(word_vec_dim),
             name='out',
-            input='dropout%i'%(mlp_layer-1)
+            input='mlp'+str(mlp_layer-1)
             )
     model.add_output(name='output', input='out')
     return model

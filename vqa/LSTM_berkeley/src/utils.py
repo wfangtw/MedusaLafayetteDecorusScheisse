@@ -16,17 +16,17 @@ from itertools import zip_longest
 #########################
 
 def LoadIds(dataset, data_dir='/home/mlds/data/'):
-    # output: 2 lists with integers (ids) as elements
-    # ex. [ q_id1,q_id2, ... ], [ img_id1, img_id2, ... ]
+    # output: list with tuples as elements, list with integers (ids) as elements
+    # ex. [ (img_id, q_id), (), (), (), ... ], [ img_id1, img_id2, ... ]
     assert (dataset == 'train' or dataset == 'dev' or dataset == 'test')
-    q_ids = []
+    id_pairs = []
     img_ids = []
     with open(data_dir + 'id.' + dataset, 'r') as data:
         for line in data:
             ids = line.strip().split('\t')
-            q_ids.append(int(ids[1]))
+            id_pairs.append((int(ids[0]), int(ids[1])))
             img_ids.append(int(ids[0]))
-    return q_ids, img_ids
+    return id_pairs, img_ids
 
 def LoadQuestions(dataset, data_dir='/home/mlds/data/'):
     # output: list with lists as elements
@@ -71,13 +71,6 @@ def LoadChoices(dataset, data_dir='/home/mlds/data/'):
                 wrapper = []
     return choices
 
-def LoadCaptions(dataset, data_dir='/home/mlds/data/'):
-    # output: dict that maps an image id to its captions, which is a list
-    # ex. { 98765: ['There','is','a','cake','on','the','table','.','The','cake','is','on','the','table','.']}
-    assert (dataset == 'train' or dataset == 'test')
-    captions_map = joblib.load(data_dir + 'coco_caption.map.' + dataset)
-    return captions_map
-
 def LoadVGGFeatures():
     # output:
     #     vgg_img_map: a dictionary that maps the COCO Ids to their indices in the precomputed VGG feature matrix
@@ -120,11 +113,11 @@ def LoadGloVe():
             i += 1
     return word_embedding, word_map
 
-def SavePredictions(filepath, predictions, qids):
+def SavePredictions(filepath, predictions, id_pairs):
     with open(filepath, 'w') as f:
         f.write('q_id,ans\n')
-        for i in range(len(qids)):
-            qid = qids[i]
+        for i in range(len(id_pairs)):
+            qid = id_pairs[i][1]
             pred = predictions[i]
             if pred == 1:
                 ans = 'A'
@@ -174,60 +167,20 @@ def GetQuestionsTensor(questions, word_embedding, word_map):
                 questions_tensor[i,j,:] = feature
     return questions_tensor
 
-def GetQuestionsVector(questions, word_embedding, word_map):
-    # description: returns a sentence vectors as average of word vectors of tokens in the question
-    # output:
-    #     a numpy ndarray of shape: (batch_size, word_vec_dim)
-    batch_size = len(questions)
-    #timesteps = FindQuestionsMaxLen(questions)
+def GetImgQuestionsTensor(img_ids, img_features, img_map, questions, word_embedding, word_map):
+    batch_size = len(img_ids)
+    timesteps = FindQuestionsMaxLen(questions)
+    img_features_dim = 2048
     word_vec_dim = 300
-    questions_vec = np.zeros((batch_size, word_vec_dim), float)
+    imgquestions_tensor = np.zeros((batch_size, timesteps, img_features_dim + word_vec_dim), float)
     for i in range(len(questions)):
         tokens = questions[i]
         for j in range(len(tokens)):
             feature = GetWordFeature(tokens[j], word_embedding, word_map)
-            questions_vec[i] += feature
-        if len(tokens) > 0:
-            questions_vec[i] /= len(tokens)
-    return questions_vec
-
-def GetCaptionsTensor(ids, word_embedding, word_map, caption_map):
-    # description: returns a time series of word vectors for tokens in the caption
-    # output:
-    #     a numpy ndarray of shape: (batch_size, timesteps, word_vec_dim)
-    batch_size = len(ids)
-    captions = []
-    for i in range(batch_size):
-        captions.append(caption_map[ids[i]])
-    timesteps = FindQuestionsMaxLen(captions)
-    word_vec_dim = 300
-    captions_tensor = np.zeros((batch_size, timesteps, word_vec_dim), float)
-    for i in range(len(captions)):
-        tokens = captions[i]
-        for j in range(len(tokens)):
-            feature = GetWordFeature(tokens[j], word_embedding, word_map)
             if j < timesteps:
-                captions_tensor[i,j,:] = feature
-    return captions_tensor
-
-def GetCaptionsTensor2(ids, word_embedding, word_map, caption_map):
-    # description: returns a time series of word vectors for tokens in the caption
-    # output:
-    #     a numpy ndarray of shape: (batch_size, timesteps, word_vec_dim)
-    batch_size = len(ids)
-    captions = []
-    for i in range(batch_size):
-        captions.append(caption_map[ids[i]])
-    timesteps = 125
-    word_vec_dim = 300
-    captions_tensor = np.zeros((batch_size, timesteps, word_vec_dim), float)
-    for i in range(len(captions)):
-        tokens = captions[i]
-        for j in range(len(tokens)):
-            feature = GetWordFeature(tokens[j], word_embedding, word_map)
-            if j < timesteps:
-                captions_tensor[i,j,:] = feature
-    return captions_tensor
+                imgquestions_tensor[i,j,:2048] = img_features[:,img_map[img_ids[i]]]
+                imgquestions_tensor[i,j,2048:] = feature
+    return imgquestions_tensor
 
 def GetAnswersMatrix(answers, word_embedding, word_map):
     # output:
@@ -281,3 +234,8 @@ def FindQuestionsMaxLen(questions):
         if len(question) > max_len:
             max_len = len(question)
     return max_len
+
+def InterruptHandler(sig, frame):
+    print(str(sig), file=sys.stderr)
+    print(str(sig))
+    sys.exit(-1)
